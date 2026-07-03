@@ -17,7 +17,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: src/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -36,7 +36,7 @@ services:
     depends_on:
       - postgres
     environment:
-      PGADMIN_DEFAULT_EMAIL: librarian@library.local
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: PgAdmin_2026
     ports:
       - "5151:80"

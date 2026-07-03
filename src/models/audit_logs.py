@@ -4,6 +4,8 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Any
+from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
 # =====================================================
 
 
@@ -29,7 +31,10 @@ class AuditLog(SQLModel, table=True):
     success: bool = Field(default=True)
 
     # Meta data (JSON)
-    meta: dict[str, Any] = Field(default_factory=dict)
+    meta: dict[str, Any] = Field(
+        sa_column=Column(JSONB),
+        default_factory=dict
+    )
 
     # When it happened
     created_at: datetime = Field(
