@@ -2,7 +2,6 @@
 #                       imports
 # =====================================================
 from enum import Enum
-
 from sqlmodel import SQLModel, Field
 # =====================================================
 
@@ -34,3 +33,6 @@ class BookImage(SQLModel, table=True):
 
     # Image type
     image_type: BookImageType = Field(default=BookImageType.COVER)
+
+    # Display order
+    display_order: int = Field(default=0)
