@@ -14,9 +14,12 @@ from models import (
     DimBookCopy,
     DimDate,
     DimLibrary,
+    DimLibrarian,
     DimReader,
     DimShelf,
     BookPosition,
+    BookImage,
+    LibrarianLibrary,
     FactLoan
 )
 # =====================================================
