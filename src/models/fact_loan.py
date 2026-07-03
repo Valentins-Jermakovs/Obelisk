@@ -16,7 +16,7 @@ class FactLoan(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # Foreign keys
-    book_id: int = Field(foreign_key="dim_book.id", index=True)
+    book_copy_id: int = Field(foreign_key="dim_book_copy.id", index=True)
     reader_id: int = Field(foreign_key="dim_reader.id", index=True)
     date_id: int = Field(foreign_key="dim_date.id", index=True)
     library_id: int = Field(foreign_key="dim_library.id", index=True)
