@@ -4,7 +4,6 @@
 # DIMENSION LAYER
 from .dim_author import DimAuthor
 from .dim_book import DimBook
-from .dim_date import DimDate
 from .dim_library import DimLibrary
 from .dim_librarian import DimLibrarian
 from .dim_reader import DimReader

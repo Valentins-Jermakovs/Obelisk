@@ -12,7 +12,6 @@ from models import (
     DimAuthor,
     DimBook,
     DimBookCopy,
-    DimDate,
     DimLibrary,
     DimLibrarian,
     DimReader,
