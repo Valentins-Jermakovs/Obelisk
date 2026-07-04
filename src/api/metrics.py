@@ -3,7 +3,7 @@
 # =========================================================================
 # Libraries:
 import psutil
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 # Utils:
 from utils.token_utils import admin_required
 # =========================================================================
