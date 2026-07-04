@@ -22,7 +22,7 @@ class DimAuthor(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # Author data
-    name: str = Field(index=True)
+    name: str = Field(index=True, unique=True)
     country: Optional[str] = Field(default=None, index=True)
     birth_year: Optional[int] = Field(default=None)
 

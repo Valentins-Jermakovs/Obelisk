@@ -63,3 +63,15 @@ async def librarian_required(
         )
 
     return payload
+
+
+# Administrator or Librarian
+async def admin_or_librarian_required(
+    payload: dict = Depends(validate_token)
+):
+    if "admin" not in payload.get("roles", []) and "librarian" not in payload.get("roles", []):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden"
+        )
+    return payload
