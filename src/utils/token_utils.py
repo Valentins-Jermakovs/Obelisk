@@ -1,8 +1,9 @@
 # =====================================================
 #                       imports
 # =====================================================
-from jose import jwt, JWTError, ExpiredSignatureError
-from fastapi import HTTPException
+from jose import jwt
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 from dotenv import load_dotenv
 
@@ -11,41 +12,54 @@ from dotenv import load_dotenv
 # =====================================================
 load_dotenv()
 
-# Save .env variables
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
+# =====================================================
+#                 HTTP bearer scheme
+# =====================================================
+bearer_scheme = HTTPBearer()
 
 # =====================================================
 #                   functions
 # =====================================================
-def decode_access_token(token: str) -> dict:
 
-    # Function returns None if token is invalid or expired
-    # But if valid, return dict:
-    #   {
-    #       "sub": "1",
-    #       "roles": ["user"],
-    #       "exp": 1782892714,
-    #       "iat": 1782892714
-    #   }
+# Validate access token
+async def validate_token(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)
+):
+    token = credentials.credentials
 
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM]
-        )
-        return payload
+    payload = jwt.decode(
+        token,
+        SECRET_KEY,
+        algorithms=[ALGORITHM]
+    )
 
-    except ExpiredSignatureError:
+    return payload
+
+
+# Administrator access
+async def admin_required(
+    payload: dict = Depends(validate_token)
+):
+    if "admin" not in payload.get("roles", []):
         raise HTTPException(
-            status_code=401,
-            detail="Token expired"
+            status_code=403,
+            detail="Forbidden"
         )
 
-    except JWTError:
+    return payload
+
+
+# Librarian access
+async def librarian_required(
+    payload: dict = Depends(validate_token)
+):
+    if "librarian" not in payload.get("roles", []):
         raise HTTPException(
-            status_code=401,
-            detail="Invalid token"
+            status_code=403,
+            detail="Forbidden"
         )
+
+    return payload
