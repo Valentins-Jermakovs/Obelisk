@@ -21,3 +21,4 @@ class BookPosition(SQLModel, table=True):
     # physical position data
     row: int | None = None
     column: int | None = None
+    depth: int | None = None

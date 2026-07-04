@@ -4,7 +4,15 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Optional
+from enum import Enum
 # =====================================================
+
+class LoanStatus(str, Enum):
+    ACTIVE = "active"
+    LOST = "lost"
+    RETURNED = "returned"
+    OVERDUE = "overdue"
+
 
 # Loan model
 class FactLoan(SQLModel, table=True):

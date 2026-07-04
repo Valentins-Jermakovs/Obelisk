@@ -19,7 +19,8 @@ from models import (
     BookPosition,
     BookImage,
     LibrarianLibrary,
-    FactLoan
+    FactLoan,
+    BookAuthor
 )
 # =====================================================
 

@@ -2,8 +2,16 @@
 #                       imports
 # =====================================================
 from sqlmodel import SQLModel, Field
+from enum import Enum
 # =====================================================
 
+
+class BookCondition(str, Enum):
+    NEW = "new"
+    GOOD = "good"
+    FAIR = "fair"
+    DAMAGED = "damaged"
+    LOST = "lost"
 
 # Book copy model
 class DimBookCopy(SQLModel, table=True):
@@ -17,4 +25,4 @@ class DimBookCopy(SQLModel, table=True):
     # Book copy data
     book_id: int = Field(foreign_key="dim_book.id", index=True)
     inventory_code: str = Field(index=True, unique=True)
-    condition: str = Field(default="good", index=True)
+    condition: BookCondition = Field(default=BookCondition.GOOD)

@@ -4,9 +4,14 @@
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Any
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, JSON
+from enum import Enum
 # =====================================================
+
+class EntityType(str, Enum):
+    BOOK = "book"
+    READER = "reader"
+    LOAN = "loan"
 
 
 # Audit log model
@@ -25,14 +30,14 @@ class AuditLog(SQLModel, table=True):
     action: str = Field(index=True)
 
     # Entity type
-    entity_type: str = Field(index=True)  # "book", "reader", "loan"
+    entity_type: EntityType | None = Field(index=True)
 
     # Operation status
     success: bool = Field(default=True)
 
     # Meta data (JSON)
     meta: dict[str, Any] = Field(
-        sa_column=Column(JSONB),
+        sa_column=Column(JSON),
         default_factory=dict
     )
 

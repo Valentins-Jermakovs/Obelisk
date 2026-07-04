@@ -1,8 +1,14 @@
 # =====================================================
 #                       imports
 # =====================================================
-from sqlmodel import SQLModel, Field
+from typing import TYPE_CHECKING
+from sqlmodel import SQLModel, Field, Relationship
+from .book_authors import BookAuthor
 # =====================================================
+
+if TYPE_CHECKING:
+    from .dim_author import DimAuthor
+
 
 # Book model
 class DimBook(SQLModel, table=True):
@@ -20,4 +26,4 @@ class DimBook(SQLModel, table=True):
     language: str = Field(default="en")
     publication_year: int
 
-    author_id: int = Field(foreign_key="dim_author.id")
+    authors: list["DimAuthor"] = Relationship(back_populates="books", link_model=BookAuthor)

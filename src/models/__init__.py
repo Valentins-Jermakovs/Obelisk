@@ -19,4 +19,5 @@ from .book_position import BookPosition
 from .audit_logs import AuditLog
 # M2M
 from .librarian_library import LibrarianLibrary
+from .book_authors import BookAuthor
 # =====================================================
