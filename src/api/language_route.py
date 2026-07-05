@@ -14,7 +14,7 @@ from services.language_service import (
     delete_language
 )
 # Schemas
-from schemas.language import LanguageCreate, LanguageUpdate, LanguageRead
+from schemas.language import LanguageCreate, LanguageUpdate, LanguageRead, LanguageSearchResponse
 # Utils:
 from utils.token_utils import admin_required
 # =====================================================
@@ -43,13 +43,20 @@ async def create(
 
 
 # Search languages
-@router.get("", response_model=list[LanguageRead])
+@router.get("/search", response_model=LanguageSearchResponse)
 async def search(
-    q: str = Query(..., min_length=1),
+    query: str | None = Query(default=None),
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await search_languages(session, q)
+    return await search_languages(
+        session=session,
+        query=query,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Update language

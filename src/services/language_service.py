@@ -3,7 +3,8 @@
 # =====================================================
 # Libraries:
 from fastapi import HTTPException
-from sqlmodel import select
+from sqlalchemy import func
+from sqlmodel import select, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Models:
 from models import DimLanguage, BookLanguage
@@ -47,20 +48,45 @@ async def create_language(
 # Search
 async def search_languages(
     session: AsyncSession,
-    query: str
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
-    q = query.strip().lower()
+    base_stmt = select(DimLanguage)
 
-    languages = (await session.exec(
-        select(DimLanguage)
-        .where(
-            (DimLanguage.code.ilike(f"%{q}%")) |
-            (DimLanguage.name.ilike(f"%{q}%"))
+    if query and query.strip():
+        q = query.strip().lower()
+
+        base_stmt = base_stmt.where(
+            or_(
+                DimLanguage.code.ilike(f"%{q}%"),
+                DimLanguage.name.ilike(f"%{q}%")
+            )
         )
-        .limit(10)
-    )).all()
 
-    return languages
+    # total
+    total_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total = (await session.exec(total_stmt)).one()
+
+    # pagination
+    stmt = base_stmt.offset(offset).limit(limit)
+    result = await session.exec(stmt)
+    languages = result.all()
+
+    return {
+        "items": [
+            {
+                "id": l.id,
+                "code": l.code,
+                "name": l.name
+            }
+            for l in languages
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(languages)
+    }
 
 
 # Update
