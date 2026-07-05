@@ -9,7 +9,7 @@ from config.db_dependency import get_db
 # Utils:
 from utils.token_utils import validate_token
 # Schemas:
-from schemas.shelf import ShelfCreate, ShelfUpdate, ShelfRead
+from schemas.shelf import ShelfCreate, ShelfUpdate, ShelfRead, ShelfSearchResponse
 # Services:
 from services.shelf_service import (
     create_shelf,
@@ -50,14 +50,21 @@ async def create(
 
 
 # Search
-@router.get("", response_model=list[ShelfRead])
+@router.get("", response_model=ShelfSearchResponse)
 async def search(
     library_id: int,
-    q: str = Query(..., min_length=1),
-    session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(validate_token)
+    q: str | None = None,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_db)
 ):
-    return await search_shelves(session, library_id, q, payload)
+    return await search_shelves(
+        session=session,
+        library_id=library_id,
+        query=q,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Update

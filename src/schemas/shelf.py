@@ -24,3 +24,13 @@ class ShelfRead(BaseModel):
     library_id: int
     code: str
     section: Optional[str] = None
+
+# Search shelf schema - wrapper
+class ShelfSearchResponse(BaseModel):
+    items: list[ShelfRead]
+
+    total: int
+    returned: int
+
+    library_total_shelves: int
+    library_remaining: int

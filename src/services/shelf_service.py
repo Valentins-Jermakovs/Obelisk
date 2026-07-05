@@ -3,8 +3,9 @@
 # =====================================================
 # Libraries:
 from fastapi import HTTPException, Depends
-from sqlmodel import select
+from sqlmodel import select, or_
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import func
 # Models:
 from models import (
     DimShelf, 
@@ -67,25 +68,47 @@ async def check_library_access(
 async def search_shelves(
     session: AsyncSession,
     library_id: int,
-    query: str,
-    payload: dict = Depends(validate_token)
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0,
 ):
-    librarian = await get_current_librarian(session, payload)
-    await check_library_access(session, librarian.id, library_id)
+    # base query
+    base_stmt = select(DimShelf).where(
+        DimShelf.library_id == library_id
+    )
 
-    q = query.strip().lower()
+    # filtered query
+    stmt = base_stmt
 
-    shelves = (await session.exec(
-        select(DimShelf).where(
-            DimShelf.library_id == library_id,
-            (
-                DimShelf.code.ilike(f"%{q}%") |
+    if query:
+        q = query.strip().lower()
+        stmt = stmt.where(
+            or_(
+                DimShelf.code.ilike(f"%{q}%"),
                 DimShelf.section.ilike(f"%{q}%")
             )
-        ).limit(10)
-    )).all()
+        )
 
-    return shelves
+    # pagination
+    paginated_stmt = stmt.offset(offset).limit(limit)
+
+    items = (await session.exec(paginated_stmt)).all()
+
+    # total shelves in library (WITHOUT filter)
+    total_stmt = select(func.count(DimShelf.id)).where(
+        DimShelf.library_id == library_id
+    )
+    total = (await session.exec(total_stmt)).one()
+
+    returned = len(items)
+
+    return {
+        "items": items,
+        "total": total,
+        "returned": returned,
+        "library_total_shelves": total,
+        "library_remaining": max(total - offset - returned, 0)
+    }
 
 # Create shelf
 async def create_shelf(
