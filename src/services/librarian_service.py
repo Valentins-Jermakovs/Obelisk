@@ -4,6 +4,7 @@
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_
+from sqlalchemy import func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
 # Models:
@@ -141,45 +142,79 @@ async def add_librarian_to_library(session, librarian_id: int, library_id: int):
 
 # Search librarians with libraries
 async def search_librarians_with_libraries(
-    session: AsyncSession, 
-    query: str
+    session: AsyncSession,
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
+    stmt = select(DimLibrarian)
 
-    q = query.strip().lower()
-
-    librarians = (await session.exec(
-        select(DimLibrarian).where(
-            or_(
-                DimLibrarian.full_name.ilike(f"%{q}%"),
-                DimLibrarian.email.ilike(f"%{q}%")
+    # filtering
+    if query:
+        q = query.strip().lower()
+        if q:
+            stmt = stmt.where(
+                or_(
+                    DimLibrarian.full_name.ilike(f"%{q}%"),
+                    DimLibrarian.email.ilike(f"%{q}%")
+                )
             )
-        ).limit(10)
+
+    # total count
+    total_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await session.exec(total_stmt)).one()
+
+    # pagination
+    stmt = stmt.offset(offset).limit(limit)
+    librarians = (await session.exec(stmt)).all()
+
+    librarian_ids = [l.id for l in librarians]
+
+    # bulk fetch links
+    links = (await session.exec(
+        select(LibrarianLibrary).where(
+            LibrarianLibrary.librarian_id.in_(librarian_ids)
+        )
     )).all()
 
-    results = []
+    library_ids = list(set([l.library_id for l in links]))
 
-    for lib in librarians:
-
-        library_links = (await session.exec(
-            select(LibrarianLibrary.library_id).where(
-                LibrarianLibrary.librarian_id == lib.id
-            )
+    # bulk fetch libraries
+    libraries = {}
+    if library_ids:
+        libs = (await session.exec(
+            select(DimLibrary).where(DimLibrary.id.in_(library_ids))
         )).all()
 
-        libraries = []
-        if library_links:
-            libraries = (await session.exec(
-                select(DimLibrary).where(DimLibrary.id.in_(library_links))
-            )).all()
+        libraries = {l.id: l for l in libs}
 
-        results.append({
-            "id": lib.id,
-            "full_name": format_full_name(lib.full_name),
-            "email": lib.email,
-            "libraries": [format_library(l) for l in libraries]
-        })
+    # group libraries per librarian
+    grouped = {lid: [] for lid in librarian_ids}
 
-    return results
+    for link in links:
+        if link.library_id in libraries:
+            grouped[link.librarian_id].append(
+                libraries[link.library_id]
+            )
+
+    # final result
+    return {
+        "items": [
+            {
+                "id": lib.id,
+                "full_name": format_full_name(lib.full_name),
+                "email": lib.email,
+                "libraries": [
+                    format_library(l) for l in grouped.get(lib.id, [])
+                ]
+            }
+            for lib in librarians
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(librarians)
+    }
 
 
 # Remove link between librarian and library

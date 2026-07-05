@@ -2,7 +2,7 @@
 #                       imports
 # =====================================================
 # Libraries:
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
@@ -19,7 +19,8 @@ from services.librarian_service import (
 from schemas.librarian import (
     LibrarianCreate,
     LibrarianUpdate,
-    LibrarianWithLibraries
+    LibrarianWithLibraries,
+    LibrarianSearchResponse
 )
 # Utils:
 from utils.token_utils import admin_required
@@ -67,13 +68,20 @@ async def link_library(
 
 
 # Search
-@router.get("/search", response_model=list[LibrarianWithLibraries])
+@router.get("/search", response_model=LibrarianSearchResponse)
 async def search(
-    query: str,
+    query: str | None = None,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await search_librarians_with_libraries(session, query)
+    return await search_librarians_with_libraries(
+        session=session,
+        query=query,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Unlink library

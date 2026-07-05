@@ -35,3 +35,12 @@ class LibrarianWithLibraries(BaseModel):
     full_name: str
     email: str
     libraries: List[LibraryShort]
+
+# Librarian search response schema
+class LibrarianSearchResponse(BaseModel):
+    items: List[LibrarianWithLibraries]
+
+    total: int
+    limit: int
+    offset: int
+    returned: int
