@@ -2,12 +2,12 @@
 #                       imports
 # =====================================================
 # Libraries:
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # DB:
 from config.db_dependency import get_db
 # Schemas
-from schemas.genre import GenreCreate, GenreUpdate, GenreRead
+from schemas.genre import GenreCreate, GenreUpdate, GenreRead, GenreSearchResponse
 # Services
 from services.genre_service import (
     create_genre,
@@ -47,16 +47,20 @@ async def create(
 
 
 # Search genres
-@router.get(
-    "/search",
-    response_model=list[GenreRead]
-)
+@router.get("/search", response_model=GenreSearchResponse)
 async def search(
-    query: str,
+    query: str | None = None,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):
-    return await search_genres(session, query)
+    return await search_genres(
+        session=session,
+        query=query,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Update genre

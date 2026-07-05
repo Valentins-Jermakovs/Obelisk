@@ -27,3 +27,13 @@ class GenreWithBooks(BaseModel):
     id: int
     name: str
     books: List[dict] = []
+
+
+# Search genre response
+class GenreSearchResponse(BaseModel):
+    items: List[GenreRead]
+
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1)
+    offset: int = Field(ge=0)
+    returned: int = Field(ge=0)

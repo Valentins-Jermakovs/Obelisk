@@ -3,9 +3,9 @@
 # =====================================================
 # Libraries:
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-import re
 # Models:
 from models import DimGenre, BookGenre
 # Schemas:
@@ -47,21 +47,39 @@ async def create_genre(
 # Search genres
 async def search_genres(
     session: AsyncSession,
-    query: str
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
-    q = query.strip().lower()
+    base_stmt = select(DimGenre)
 
-    genres = (
-        await session.exec(
-            select(DimGenre)
-            .where(
-                DimGenre.name.ilike(f"%{q}%")
-            )
-            .limit(10)
+    # фильтр только если есть query
+    if query and query.strip():
+        q = query.strip().lower()
+
+        base_stmt = base_stmt.where(
+            DimGenre.name.ilike(f"%{q}%")
         )
-    ).all()
 
-    return genres
+    # total
+    total_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total = (await session.exec(total_stmt)).one()
+
+    # pagination
+    stmt = base_stmt.offset(offset).limit(limit)
+    result = await session.exec(stmt)
+    genres = result.all()
+
+    return {
+        "items": [
+            {"id": g.id, "name": g.name}
+            for g in genres
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(genres)
+    }
 
 
 # Update genres
