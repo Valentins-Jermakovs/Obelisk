@@ -4,6 +4,7 @@
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_
+from sqlalchemy import func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
 # Models:
@@ -123,31 +124,46 @@ async def update_reader(
 # Search reader
 async def search_readers(
     session: AsyncSession,
-    query: str
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
-    q = query.strip().lower()
+    base_stmt = select(DimReader)
 
-    readers = (
-        await session.exec(
-            select(DimReader)
-            .where(
-                or_(
-                    DimReader.full_name.ilike(f"%{q}%"),
-                    DimReader.email.ilike(f"%{q}%")
-                )
+    # фильтрация только если есть запрос
+    if query and query.strip():
+        q = query.strip().lower()
+
+        base_stmt = base_stmt.where(
+            or_(
+                DimReader.full_name.ilike(f"%{q}%"),
+                DimReader.email.ilike(f"%{q}%")
             )
-            .limit(10)
         )
-    ).all()
 
-    return [
-        {
-            "id": r.id,
-            "full_name": format_full_name(r.full_name),
-            "email": r.email
-        }
-        for r in readers
-    ]
+    # total count
+    total_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total = (await session.exec(total_stmt)).one()
+
+    # pagination
+    stmt = base_stmt.offset(offset).limit(limit)
+    result = await session.exec(stmt)
+    readers = result.all()
+
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "full_name": format_full_name(r.full_name),
+                "email": r.email
+            }
+            for r in readers
+        ],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(readers)
+    }
 
 
 # Delete reader

@@ -21,3 +21,12 @@ class ReaderRead(BaseModel):
     id: int
     full_name: str
     email: str
+
+# Response
+class ReaderSearchResponse(BaseModel):
+    items: list[ReaderRead]
+
+    total: int = Field(ge=0)
+    limit: int = Field(ge=1)
+    offset: int = Field(ge=0)
+    returned: int = Field(ge=0)

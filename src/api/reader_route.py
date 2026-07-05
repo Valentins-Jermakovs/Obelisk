@@ -2,7 +2,7 @@
 #                       imports
 # =====================================================
 # Libraries:
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Database:
 from config.db_dependency import get_db
@@ -11,6 +11,7 @@ from schemas.reader import (
     ReaderCreate,
     ReaderUpdate,
     ReaderRead,
+    ReaderSearchResponse
 )
 # Services:
 from services.reader_service import (
@@ -50,16 +51,20 @@ async def create(
 
 
 # Search readers
-@router.get(
-    "/search",
-    response_model=list[ReaderRead]
-)
+@router.get("/search", response_model=ReaderSearchResponse)
 async def search(
-    query: str,
+    query: str | None = None,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):
-    return await search_readers(session, query)
+    return await search_readers(
+        session=session,
+        query=query,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Update reader
