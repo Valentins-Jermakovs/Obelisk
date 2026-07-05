@@ -2,6 +2,7 @@
 #                       imports
 # =====================================================
 from sqlmodel import SQLModel, Field
+from sqlalchemy import ForeignKey, Column
 # =====================================================
 
 
@@ -16,9 +17,10 @@ class DimShelf(SQLModel, table=True):
 
     # Library id
     library_id: int = Field(
-        foreign_key="dim_library.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "CASCADE"}
+        sa_column=Column(
+            ForeignKey("dim_library.id", ondelete="CASCADE"),
+            index=True
+        )
     )
 
     # Shelf data

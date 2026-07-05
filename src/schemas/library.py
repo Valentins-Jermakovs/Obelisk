@@ -1,7 +1,8 @@
 # ===================================================
 #                       imports
 # ===================================================
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Optional
 # ===================================================
 
 
@@ -11,13 +12,34 @@ from pydantic import BaseModel
 
 # Library create schema
 class LibraryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    city: str = Field(min_length=1, max_length=100)
+    address: str = Field(min_length=1, max_length=255)
+
+
+# Library update schema
+class LibraryUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    city: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    address: Optional[str] = Field(default=None, min_length=1, max_length=255)
+
+
+# Library read schema
+class LibraryRead(BaseModel):
+    id: int
     name: str
     city: str
     address: str
 
 
-# Library update schema
-class LibraryUpdate(BaseModel):
-    name: str | None = None
-    city: str | None = None
-    address: str | None = None
+# Library delete response schema
+class LibraryDeleteResponse(BaseModel):
+    status: str
+    forced: bool = False
+
+
+# Library delete warning respons
+class LibraryDeleteWarning(BaseModel):
+    warning: str
+    details: dict
+    message: str

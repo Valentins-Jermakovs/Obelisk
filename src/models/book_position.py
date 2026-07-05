@@ -2,6 +2,7 @@
 #                       imports
 # =====================================================
 from sqlmodel import SQLModel, Field
+from sqlalchemy import ForeignKey, Column
 # =====================================================
 
 
@@ -17,9 +18,10 @@ class BookPosition(SQLModel, table=True):
     # id's of other tables
     book_copy_id: int = Field(foreign_key="dim_book_copy.id", index=True)
     shelf_id: int = Field(
-        foreign_key="dim_shelf.id", 
-        index=True,
-        sa_column_kwargs={"ondelete": "CASCADE"}
+        sa_column=Column(
+            ForeignKey("dim_shelf.id", ondelete="CASCADE"),
+            index=True
+        )
     )
 
     # physical position data

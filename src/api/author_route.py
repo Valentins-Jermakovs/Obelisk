@@ -21,7 +21,7 @@ from services.author_service import (
     delete_author
 )
 # Utils:
-from utils.token_utils import admin_or_librarian_required
+from utils.token_utils import admin_required
 # ==================================================
 
 
@@ -41,7 +41,7 @@ router = APIRouter(
 async def create_author_route(
     author: AuthorCreate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
+    payload: dict = Depends(admin_required)
 ):
     return await create_author(session, author)
 
@@ -50,7 +50,6 @@ async def create_author_route(
 async def search_authors_route(
     q: str,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
 ):
     return await search_authors(session, q)
 
@@ -63,7 +62,7 @@ async def update_author_route(
     author_id: int,
     author: AuthorUpdate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
+    payload: dict = Depends(admin_required)
 ):
     return await update_author(
         session=session,
@@ -81,7 +80,7 @@ async def delete_author_route(
     author_id: int,
     force: bool = False,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
+    payload: dict = Depends(admin_required)
 ):
     return await delete_author(
         session=session,
