@@ -1,9 +1,10 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
-# DB
+# DB:
 from config.db_dependency import get_db
 # Schemas
 from schemas.genre import GenreCreate, GenreUpdate, GenreRead
@@ -15,7 +16,7 @@ from services.genre_service import (
     delete_genre
 )
 # Auth
-from utils.token_utils import admin_required
+from utils.token_utils import admin_required, admin_or_librarian_required
 # =====================================================
 
 
@@ -53,7 +54,7 @@ async def create(
 async def search(
     query: str,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
     return await search_genres(session, query)
 

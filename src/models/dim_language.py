@@ -17,7 +17,22 @@ class DimLanguage(SQLModel, table=True):
     __tablename__ = "dim_language"
 
     id: int | None = Field(default=None, primary_key=True)
-    code: str = Field(index=True, unique=True)
-    name: str | None = Field(default=None)
 
-    books: list["DimBook"] = Relationship(back_populates="languages", link_model=BookLanguage)
+    code: str = Field(
+        index=True,
+        unique=True,
+        min_length=2,
+        max_length=10
+    )
+
+    name: str | None = Field(
+        default=None,
+        index=True,
+        max_length=100
+    )
+
+    books: list["DimBook"] = Relationship(
+        back_populates="languages",
+        link_model=BookLanguage,
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )

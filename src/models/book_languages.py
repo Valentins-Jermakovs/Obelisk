@@ -2,6 +2,7 @@
 #                       imports
 # =====================================================
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, ForeignKey
 # =====================================================
 
 
@@ -11,5 +12,16 @@ class BookLanguage(SQLModel, table=True):
     # Table name
     __tablename__ = "book_languages"
 
-    book_id: int | None = Field(default=None, foreign_key="dim_book.id", primary_key=True)
-    language_id: int | None = Field(default=None, foreign_key="dim_language.id", primary_key=True)
+    book_id: int = Field(
+        sa_column=Column(
+            ForeignKey("dim_book.id", ondelete="CASCADE"),
+            primary_key=True
+        )
+    )
+
+    language_id: int = Field(
+        sa_column=Column(
+            ForeignKey("dim_language.id", ondelete="CASCADE"),
+            primary_key=True
+        )
+    )
