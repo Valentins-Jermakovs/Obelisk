@@ -43,3 +43,12 @@ class LibraryDeleteWarning(BaseModel):
     warning: str
     details: dict
     message: str
+
+# Search response schema
+class LibrarySearchResponse(BaseModel):
+    items: list["LibraryRead"]
+
+    total: int
+    limit: int
+    offset: int
+    returned: int

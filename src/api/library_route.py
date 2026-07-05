@@ -3,7 +3,7 @@
 # ==================================================
 # Libraries:
 from typing import Union
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
@@ -13,7 +13,8 @@ from schemas.library import (
     LibraryUpdate,
     LibraryRead,
     LibraryDeleteWarning,
-    LibraryDeleteResponse
+    LibraryDeleteResponse,
+    LibrarySearchResponse
 )
 # Services:
 from services.library_service import (
@@ -50,12 +51,19 @@ async def create_library_route(
 
 
 # Search
-@router.get("/search", response_model=list[LibraryRead])
+@router.get("/search", response_model=LibrarySearchResponse)
 async def search_libraries_route(
-    q: str,
+    q: str | None = None,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db)
 ):
-    return await search_libraries(session, q)
+    return await search_libraries(
+        session=session,
+        query=q,
+        limit=limit,
+        offset=offset
+    )
 
 
 # Get by ID

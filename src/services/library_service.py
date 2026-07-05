@@ -5,6 +5,7 @@
 # ====================================================
 # Libraries:
 from sqlmodel import select, or_
+from sqlalchemy import func
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Models:
@@ -71,24 +72,42 @@ async def create_library(
 
 # Search library by city/name/address
 async def search_libraries(
-    session: AsyncSession, 
-    query: str
+    session: AsyncSession,
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
+    stmt = select(DimLibrary)
 
-    q = query.strip().lower()
+    # optional filtering
+    if query:
+        q = query.strip().lower()
 
-    stmt = select(DimLibrary).where(
-        or_(
-            DimLibrary.name.ilike(f"%{q}%"),
-            DimLibrary.city.ilike(f"%{q}%"),
-            DimLibrary.address.ilike(f"%{q}%")
-        )
-    ).limit(10)
+        if q:
+            stmt = stmt.where(
+                or_(
+                    DimLibrary.name.ilike(f"%{q}%"),
+                    DimLibrary.city.ilike(f"%{q}%"),
+                    DimLibrary.address.ilike(f"%{q}%")
+                )
+            )
 
+    # total count (with or without filter)
+    total_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await session.exec(total_stmt)).one()
+
+    # pagination
+    stmt = stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     libraries = result.all()
 
-    return [format_library(l) for l in libraries]
+    return {
+        "items": [format_library(l) for l in libraries],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(libraries)
+    }
 
 # Get library by ID
 async def get_library(
