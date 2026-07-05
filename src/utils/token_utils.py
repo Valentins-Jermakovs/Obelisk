@@ -1,7 +1,7 @@
 # =====================================================
 #                       imports
 # =====================================================
-from jose import jwt
+from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
@@ -30,13 +30,26 @@ async def validate_token(
 ):
     token = credentials.credentials
 
-    payload = jwt.decode(
-        token,
-        SECRET_KEY,
-        algorithms=[ALGORITHM]
-    )
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
 
-    return payload
+        return payload
+
+    except ExpiredSignatureError:
+        raise HTTPException(
+            status_code=401,
+            detail="Token has expired"
+        )
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token"
+        )
 
 
 # Administrator access

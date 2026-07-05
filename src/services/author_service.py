@@ -132,22 +132,20 @@ async def update_author(
 
 # Delete an author
 async def delete_author(
-    session: AsyncSession, 
-    author_id: int, 
+    session: AsyncSession,
+    author_id: int,
     force: bool = False
 ):
+
     author = await session.get(DimAuthor, author_id)
 
     if not author:
-        raise HTTPException(
-            status_code=404, 
-            detail="Author not found"
-        )
+        raise HTTPException(404, "Author not found")
 
-    result = await session.exec(
+    # check links
+    links = (await session.exec(
         select(BookAuthor).where(BookAuthor.author_id == author_id)
-    )
-    links = result.all()
+    )).all()
 
     if links and not force:
         return {
@@ -156,9 +154,15 @@ async def delete_author(
             "message": "Set force=True to delete author and unlink books"
         }
 
-    for link in links:
-        await session.delete(link)
+    # DELETE ALL LINKS IN ONE GO (better than loop)
+    if links:
+        await session.exec(
+            select(BookAuthor).where(BookAuthor.author_id == author_id)
+        )
+        for link in links:
+            await session.delete(link)
 
+    # delete author
     await session.delete(author)
     await session.commit()
 

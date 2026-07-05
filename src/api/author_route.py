@@ -21,7 +21,7 @@ from services.author_service import (
     delete_author
 )
 # Utils:
-from utils.token_utils import admin_required
+from utils.token_utils import admin_required, admin_or_librarian_required
 # ==================================================
 
 
@@ -46,10 +46,12 @@ async def create_author_route(
     return await create_author(session, author)
 
 
+# Search author
 @router.get("/search", response_model=list[AuthorRead])
 async def search_authors_route(
     q: str,
     session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(admin_or_librarian_required)
 ):
     return await search_authors(session, q)
 
