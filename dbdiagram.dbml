@@ -9,9 +9,29 @@ Table dim_book {
   id int [pk, increment]
   title varchar [not null]
   isbn varchar [unique, not null]
-  genre varchar [not null]
-  language varchar [default: 'en']
+  annotation text
   publication_year int [not null]
+}
+
+Table dim_genre {
+  id int [pk, increment]
+  name varchar [unique, not null]
+}
+
+Table dim_language {
+  id int [pk, increment]
+  code varchar [unique, not null]
+  name varchar
+}
+
+Table book_genres {
+  book_id int [pk]
+  genre_id int [pk]
+}
+
+Table book_languages {
+  book_id int [pk]
+  language_id int [pk]
 }
 
 Table book_authors {
@@ -98,6 +118,12 @@ Table audit_logs {
 
 Ref: book_authors.book_id > dim_book.id
 Ref: book_authors.author_id > dim_author.id
+
+Ref: book_genres.book_id > dim_book.id
+Ref: book_genres.genre_id > dim_genre.id
+
+Ref: book_languages.book_id > dim_book.id
+Ref: book_languages.language_id > dim_language.id
 
 Ref: dim_book_copy.book_id > dim_book.id
 

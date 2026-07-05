@@ -23,8 +23,20 @@ async def create_author(
     session: AsyncSession,
     author_data: AuthorCreate
 ):
+    # Convert to dict
+    data = author_data.model_dump()
+
+    # Normalize data
+    data["name"] = data["name"].strip().lower()
+    data["country"] = (
+        data["country"].strip().lower()
+        if data["country"] is not None
+        else None
+    )
+
+    # Check if the author already exists
     statement = select(DimAuthor).where(
-        DimAuthor.name == author_data.name
+        DimAuthor.name == data["name"]
     )
 
     result = await session.exec(statement)
@@ -36,8 +48,10 @@ async def create_author(
             detail="Author already exists"
         )
 
-    author = DimAuthor(**author_data.model_dump())
+    # Create author
+    author = DimAuthor(**data)
 
+    # Save to database
     session.add(author)
     await session.commit()
     await session.refresh(author)
@@ -63,12 +77,14 @@ async def search_authors(
     result = await session.exec(statement)
     return result.all()
 
+
 # Update an author
 async def update_author(
     session: AsyncSession,
     author_id: int,
     author_data: AuthorUpdate
 ):
+    # Check if author exists
     author = await session.get(DimAuthor, author_id)
 
     if not author:
@@ -77,8 +93,17 @@ async def update_author(
             detail="Author not found"
         )
 
+    # Get only provided fields
     update_data = author_data.model_dump(exclude_unset=True)
 
+    # Normalize string fields
+    if "name" in update_data and update_data["name"] is not None:
+        update_data["name"] = update_data["name"].strip().lower()
+
+    if "country" in update_data and update_data["country"] is not None:
+        update_data["country"] = update_data["country"].strip().lower()
+
+    # Update only provided fields
     for key, value in update_data.items():
         setattr(author, key, value)
 

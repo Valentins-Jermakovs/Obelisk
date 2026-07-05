@@ -20,4 +20,8 @@ from .audit_logs import AuditLog
 # M2M
 from .librarian_library import LibrarianLibrary
 from .book_authors import BookAuthor
+from .book_genres import BookGenre
+from .book_languages import BookLanguage
+from .dim_genre import DimGenre
+from .dim_language import DimLanguage
 # =====================================================

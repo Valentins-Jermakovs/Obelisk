@@ -20,7 +20,11 @@ from models import (
     BookImage,
     LibrarianLibrary,
     FactLoan,
-    BookAuthor
+    BookAuthor,
+    DimGenre,
+    DimLanguage,
+    BookGenre,
+    BookLanguage
 )
 # =====================================================
 

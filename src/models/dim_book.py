@@ -4,6 +4,8 @@
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from .book_authors import BookAuthor
+from .book_genres import BookGenre
+from .book_languages import BookLanguage
 # =====================================================
 
 if TYPE_CHECKING:
@@ -22,8 +24,9 @@ class DimBook(SQLModel, table=True):
     # Book data
     title: str = Field(index=True)
     isbn: str = Field(index=True, unique=True)
-    genre: str = Field(index=True)
-    language: str = Field(default="en")
+    annotation: str | None = Field(default=None)
     publication_year: int
 
     authors: list["DimAuthor"] = Relationship(back_populates="books", link_model=BookAuthor)
+    genres: list["DimGenre"] = Relationship(back_populates="books", link_model=BookGenre)
+    languages: list["DimLanguage"] = Relationship(back_populates="books", link_model=BookLanguage)
