@@ -4,6 +4,8 @@
 # Libraries:
 import psutil
 from fastapi import APIRouter, Depends
+# Schemas:
+from schemas.metrics import SystemMetrics
 # Utils:
 from utils.token_utils import admin_required
 # =========================================================================
@@ -21,20 +23,14 @@ router = APIRouter(
 #                               Endpoints
 # =========================================================================
 # =============== Endpoint for getting metrics =============================
-@router.get("/stats")
+@router.get("/stats", response_model=SystemMetrics)
 async def metrics(
     payload: dict = Depends(admin_required)
 ):
 
     # Return current system metrics
-    return {
-        # CPU usage percentage
-        "cpu_percent": psutil.cpu_percent(),
-
-        # Memory usage percentage
-        "memory_percent": psutil.virtual_memory().percent,
-
-        # Used memory in megabytes
-        "memory_used_mb":
-            round(psutil.virtual_memory().used / 1024 / 1024),
-    }
+    return SystemMetrics(
+        cpu_percent=psutil.cpu_percent(),
+        memory_percent=psutil.virtual_memory().percent,
+        memory_used_mb=round(psutil.virtual_memory().used / 1024 / 1024),
+    )
