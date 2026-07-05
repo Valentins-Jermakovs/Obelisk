@@ -26,7 +26,11 @@ class FactLoan(SQLModel, table=True):
     # Foreign keys
     book_copy_id: int = Field(foreign_key="dim_book_copy.id", index=True)
     reader_id: int = Field(foreign_key="dim_reader.id", index=True)
-    library_id: int = Field(foreign_key="dim_library.id", index=True)
+    library_id: int = Field(
+        foreign_key="dim_library.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
 
     # Fact attributes
     status: str = Field(default="active", index=True)

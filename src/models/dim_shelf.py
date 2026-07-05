@@ -15,7 +15,11 @@ class DimShelf(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # Library id
-    library_id: int = Field(foreign_key="dim_library.id", index=True)
+    library_id: int = Field(
+        foreign_key="dim_library.id", 
+        index=True,
+        sa_column_kwargs={"ondelete": "CASCADE"}
+    )
 
     # Shelf data
     code: str = Field(index=True)   # A-01, B-12
