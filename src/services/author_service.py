@@ -3,6 +3,7 @@
 # ==================================================
 # Libraries:
 from sqlmodel import select, or_, cast, String
+from sqlalchemy import func
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Models:
@@ -69,23 +70,42 @@ async def create_author(
 # Search for authors
 async def search_authors(
     session: AsyncSession,
-    query: str
+    query: str | None = None,
+    limit: int = 10,
+    offset: int = 0
 ):
-    q = query.lower().strip()
+    # base query (always exists)
+    stmt = select(DimAuthor)
 
-    statement = select(DimAuthor).where(
-        or_(
-            DimAuthor.name.ilike(f"%{q}%"),
-            DimAuthor.country.ilike(f"%{q}%"),
-            cast(DimAuthor.birth_year, String).ilike(f"%{q}%")
-        )
-    ).limit(10)
+    # optional filtering
+    if query:
+        q = query.strip().lower()
 
-    result = await session.exec(statement)
+        if q:  # ignore empty string after strip
+            stmt = stmt.where(
+                or_(
+                    DimAuthor.name.ilike(f"%{q}%"),
+                    DimAuthor.country.ilike(f"%{q}%"),
+                    cast(DimAuthor.birth_year, String).ilike(f"%{q}%")
+                )
+            )
+
+    # total count (with or without filter)
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await session.exec(count_stmt)).one()
+
+    # pagination
+    stmt = stmt.offset(offset).limit(limit)
+    result = await session.exec(stmt)
     authors = result.all()
 
-    # Format output
-    return [format_author(author) for author in authors]
+    return {
+        "items": [format_author(a) for a in authors],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "returned": len(authors)
+    }
 
 
 # Update an author
@@ -132,37 +152,27 @@ async def update_author(
 
 # Delete an author
 async def delete_author(
-    session: AsyncSession,
-    author_id: int,
+    session: AsyncSession, 
+    author_id: int, 
     force: bool = False
 ):
-
     author = await session.get(DimAuthor, author_id)
 
     if not author:
         raise HTTPException(404, "Author not found")
 
-    # check links
-    links = (await session.exec(
-        select(BookAuthor).where(BookAuthor.author_id == author_id)
-    )).all()
+    if not force:
 
-    if links and not force:
-        return {
-            "warning": "Author is linked to books",
-            "books_count": len(links),
-            "message": "Set force=True to delete author and unlink books"
-        }
-
-    # DELETE ALL LINKS IN ONE GO (better than loop)
-    if links:
-        await session.exec(
+        links = (await session.exec(
             select(BookAuthor).where(BookAuthor.author_id == author_id)
-        )
-        for link in links:
-            await session.delete(link)
+        )).first()
 
-    # delete author
+        if links:
+            return {
+                "warning": "Author is linked to books",
+                "message": "Set force=True to delete author and cascade links"
+            }
+
     await session.delete(author)
     await session.commit()
 

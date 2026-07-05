@@ -11,7 +11,8 @@ from schemas.author import (
     AuthorUpdate,
     AuthorRead,
     AuthorDeleteResponse,
-    AuthorDeleteWarning
+    AuthorDeleteWarning,
+    AuthorSearchResponse
 )
 # Services:
 from services.author_service import (
@@ -47,13 +48,20 @@ async def create_author_route(
 
 
 # Search author
-@router.get("/search", response_model=list[AuthorRead])
+@router.get("/search", response_model=AuthorSearchResponse)
 async def search_authors_route(
-    q: str,
+    q: str | None = None,
+    limit: int = 10,
+    offset: int = 0,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):
-    return await search_authors(session, q)
+    return await search_authors(
+        session=session,
+        query=q,
+        limit=limit,
+        offset=offset
+    )
 
 # Update author
 @router.patch(

@@ -46,3 +46,12 @@ class AuthorDeleteWarning(BaseModel):
     warning: str
     books_count: int
     message: str
+
+
+class AuthorSearchResponse(BaseModel):
+    items: list["AuthorRead"]
+
+    total: int
+    limit: int
+    offset: int
+    returned: int
