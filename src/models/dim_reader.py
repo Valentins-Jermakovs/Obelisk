@@ -20,9 +20,3 @@ class DimReader(SQLModel, table=True):
     # User data
     full_name: str = Field(index=True)
     email: str = Field(index=True, unique=True)
-
-    # Registration date
-    registered_at: datetime = Field(
-        default_factory=lambda: datetime.now(), 
-        index=True
-    )

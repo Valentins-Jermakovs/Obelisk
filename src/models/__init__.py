@@ -12,7 +12,7 @@ from .dim_book_copy import DimBookCopy
 # BOOK IMAGES
 from .book_image import BookImage
 # FACT LAYER
-from .fact_loan import FactLoan
+from .fact_loan import FactLoan, LoanStatus
 # PHYSICAL TRACKING
 from .book_position import BookPosition
 # OBSERVABILITY

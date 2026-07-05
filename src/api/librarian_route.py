@@ -41,8 +41,7 @@ router = APIRouter(
 @router.post("")
 async def create(
     data: LibrarianCreate,
-    session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    session: AsyncSession = Depends(get_db)
 ):
     return await create_librarian(session, data)
 
@@ -52,8 +51,7 @@ async def create(
 async def update(
     librarian_id: int,
     data: LibrarianUpdate,
-    session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    session: AsyncSession = Depends(get_db)
 ):
     return await update_librarian(session, librarian_id, data)
 
@@ -93,6 +91,7 @@ async def unlink_library(
 @router.delete("/{librarian_id}")
 async def delete(
     librarian_id: int,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(admin_required)
 ):
     return await delete_librarian(session, librarian_id)
