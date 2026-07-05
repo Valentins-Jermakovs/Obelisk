@@ -5,7 +5,6 @@
 from sqlmodel import select, or_, cast, String
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import HTTPException
 # Models:
 from models import DimAuthor, BookAuthor
 # Schemas:
@@ -18,21 +17,31 @@ from schemas.author import AuthorCreate, AuthorUpdate
 #                      functions
 # ==================================================
 
+# Normalize author's name and country
+def format_author(author: DimAuthor) -> DimAuthor:
+    author.name = author.name.title()
+
+    if author.country:
+        author.country = author.country.title()
+
+    return author
+
+# Normalize author's data
+def normalize_author_data(data: dict) -> dict:
+    for field in ("name", "country"):
+        if data.get(field):
+            data[field] = data[field].strip().lower()
+
+    return data
+
+
 # Create a new author
 async def create_author(
     session: AsyncSession,
     author_data: AuthorCreate
 ):
     # Convert to dict
-    data = author_data.model_dump()
-
-    # Normalize data
-    data["name"] = data["name"].strip().lower()
-    data["country"] = (
-        data["country"].strip().lower()
-        if data["country"] is not None
-        else None
-    )
+    data = normalize_author_data(author_data.model_dump())
 
     # Check if the author already exists
     statement = select(DimAuthor).where(
@@ -48,15 +57,13 @@ async def create_author(
             detail="Author already exists"
         )
 
-    # Create author
     author = DimAuthor(**data)
 
-    # Save to database
     session.add(author)
     await session.commit()
     await session.refresh(author)
 
-    return author
+    return format_author(author)
 
 
 # Search for authors
@@ -75,7 +82,10 @@ async def search_authors(
     ).limit(10)
 
     result = await session.exec(statement)
-    return result.all()
+    authors = result.all()
+
+    # Format output
+    return [format_author(author) for author in authors]
 
 
 # Update an author
@@ -84,7 +94,6 @@ async def update_author(
     author_id: int,
     author_data: AuthorUpdate
 ):
-    # Check if author exists
     author = await session.get(DimAuthor, author_id)
 
     if not author:
@@ -93,24 +102,32 @@ async def update_author(
             detail="Author not found"
         )
 
-    # Get only provided fields
-    update_data = author_data.model_dump(exclude_unset=True)
+    update_data = normalize_author_data(
+        author_data.model_dump(exclude_unset=True)
+    )
 
-    # Normalize string fields
-    if "name" in update_data and update_data["name"] is not None:
-        update_data["name"] = update_data["name"].strip().lower()
+    if "name" in update_data:
+        statement = select(DimAuthor).where(
+            DimAuthor.name == update_data["name"],
+            DimAuthor.id != author_id
+        )
 
-    if "country" in update_data and update_data["country"] is not None:
-        update_data["country"] = update_data["country"].strip().lower()
+        result = await session.exec(statement)
+        existing = result.first()
 
-    # Update only provided fields
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail="Author with this name already exists"
+            )
+
     for key, value in update_data.items():
         setattr(author, key, value)
 
     await session.commit()
     await session.refresh(author)
 
-    return author
+    return format_author(author)
 
 
 # Delete an author
@@ -122,7 +139,10 @@ async def delete_author(
     author = await session.get(DimAuthor, author_id)
 
     if not author:
-        raise HTTPException(404, "Author not found")
+        raise HTTPException(
+            status_code=404, 
+            detail="Author not found"
+        )
 
     result = await session.exec(
         select(BookAuthor).where(BookAuthor.author_id == author_id)
