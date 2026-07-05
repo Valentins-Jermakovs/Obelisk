@@ -9,6 +9,7 @@ from .librarian_route import router as librarian_router
 from .reader_route import router as reader_router
 from .genre_route import router as genre_router
 from .language_route import router as language_router
+from .shelf_route import router as shelf_router
 # =====================================================
 
 
@@ -23,4 +24,5 @@ main_router.include_router(librarian_router)
 main_router.include_router(reader_router)
 main_router.include_router(genre_router)
 main_router.include_router(language_router)
+main_router.include_router(shelf_router)
 # =====================================================
