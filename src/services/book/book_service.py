@@ -30,6 +30,7 @@ from models import (
     BookPosition,
     FactLoan
 )
+from models import DimShelf, DimLibrary
 # Schemas:
 from schemas.book import BookCreate, BookUpdate
 # ===================================================
@@ -48,17 +49,17 @@ async def create_book(
         await _check_isbn_unique(session, data.isbn.strip())
 
         # 2. Validate FK entities (if empty - skip)
-        await _validate_existing_ids(session, DimAuthor, data.author, "Author")
-        await _validate_existing_ids(session, DimGenre, data.genre, "Genre")
-        await _validate_existing_ids(session, DimLanguage, data.language, "Language")
+        await _validate_existing_ids(session, DimAuthor, data.authors, "Author")
+        await _validate_existing_ids(session, DimGenre, data.genres, "Genre")
+        await _validate_existing_ids(session, DimLanguage, data.languages, "Language")
 
         # 3. Create base book
         book = await _create_book(session, data)
 
         # 4. Relations
-        await _link_authors(session, book.id, data.author)
-        await _link_genres(session, book.id, data.genre)
-        await _link_languages(session, book.id, data.language)
+        await _link_authors(session, book.id, data.authors)
+        await _link_genres(session, book.id, data.genres)
+        await _link_languages(session, book.id, data.languages)
 
         # 5. Images (optional)
         if hasattr(data, "images"):
@@ -419,6 +420,57 @@ async def search_books(
             else:
                 status = "available"
 
+            # --- libraries breakdown ---
+            libraries_list = []
+
+            if copy_ids:
+                # which copy ids are currently loaned
+                active_loan_rows = (await session.exec(
+                    select(FactLoan.book_copy_id).where(
+                        FactLoan.book_copy_id.in_(copy_ids),
+                        FactLoan.status == "active"
+                    )
+                )).all()
+
+                active_loan_copy_ids = set(active_loan_rows)
+
+                # positions with shelf + library
+                pos_rows = (await session.exec(
+                    select(BookPosition, DimShelf, DimLibrary)
+                    .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
+                    .join(DimLibrary, DimShelf.library_id == DimLibrary.id)
+                    .where(BookPosition.book_copy_id.in_(copy_ids))
+                )).all()
+
+                # aggregate per library
+                lib_map: dict[int, dict] = {}
+                for pos, shelf, lib in pos_rows:
+                    copy_id = pos.book_copy_id
+                    entry = lib_map.setdefault(lib.id, {
+                        "id": lib.id,
+                        "name": lib.name,
+                        "city": lib.city,
+                        "address": lib.address,
+                        "total_copies": 0,
+                        "active_loans": 0
+                    })
+
+                    entry["total_copies"] += 1
+                    if copy_id in active_loan_copy_ids:
+                        entry["active_loans"] += 1
+
+                for lid, v in lib_map.items():
+                    av = v["total_copies"] - v["active_loans"]
+                    libraries_list.append({
+                        "id": v["id"],
+                        "name": v["name"],
+                        "city": v["city"],
+                        "address": v["address"],
+                        "total_copies": v["total_copies"],
+                        "available_copies": av,
+                        "active_loans": v["active_loans"]
+                    })
+
             results.append({
                 "id": book.id,
                 "title": book.title,
@@ -431,14 +483,17 @@ async def search_books(
                     "total_copies": total_copies,
                     "available_copies": available,
                     "active_loans": active_loans
-                }
+                },
+
+                "libraries": libraries_list
             })
 
         return {
             "items": results,
             "total": total,
             "limit": limit,
-            "offset": offset
+            "offset": offset,
+            "returned": len(results)
         }
 
     except Exception as e:
@@ -532,6 +587,55 @@ async def get_book(
         # =========================
         # 8. RESPONSE
         # =========================
+
+        # libraries breakdown
+        libraries_list = []
+
+        if copy_ids:
+            active_loan_rows = (await session.exec(
+                select(FactLoan.book_copy_id).where(
+                    FactLoan.book_copy_id.in_(copy_ids),
+                    FactLoan.status == "active"
+                )
+            )).all()
+
+            active_loan_copy_ids = set([r for r in active_loan_rows])
+
+            pos_rows = (await session.exec(
+                select(BookPosition, DimShelf, DimLibrary)
+                .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
+                .join(DimLibrary, DimShelf.library_id == DimLibrary.id)
+                .where(BookPosition.book_copy_id.in_(copy_ids))
+            )).all()
+
+            lib_map: dict[int, dict] = {}
+            for pos, shelf, lib in pos_rows:
+                copy_id = pos.book_copy_id
+                entry = lib_map.setdefault(lib.id, {
+                    "id": lib.id,
+                    "name": lib.name,
+                    "city": lib.city,
+                    "address": lib.address,
+                    "total_copies": 0,
+                    "active_loans": 0
+                })
+
+                entry["total_copies"] += 1
+                if copy_id in active_loan_copy_ids:
+                    entry["active_loans"] += 1
+
+            for lid, v in lib_map.items():
+                av = v["total_copies"] - v["active_loans"]
+                libraries_list.append({
+                    "id": v["id"],
+                    "name": v["name"],
+                    "city": v["city"],
+                    "address": v["address"],
+                    "total_copies": v["total_copies"],
+                    "available_copies": av,
+                    "active_loans": v["active_loans"]
+                })
+
         return {
             "id": book.id,
             "title": book.title,
@@ -578,7 +682,9 @@ async def get_book(
                 "total_copies": total_copies,
                 "available_copies": available,
                 "active_loans": active_loans
-            }
+            },
+
+            "libraries": libraries_list
         }
 
     except HTTPException:

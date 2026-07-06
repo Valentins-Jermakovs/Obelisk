@@ -125,3 +125,56 @@ class BookRead(BaseModel):
     copies: List[CopyRead]
 
     availability: BookAvailability
+
+    # libraries where copies are located with availability per library
+    libraries: List["LibraryAvailability"] = []
+
+
+
+class LibraryShort(BaseModel):
+    id: int
+    name: str
+    city: str
+    address: str
+
+
+class LibraryAvailability(BaseModel):
+    id: int
+    name: str
+    city: str
+    address: str
+
+    total_copies: int
+    available_copies: int
+    active_loans: int
+
+
+class BookSearchItem(BaseModel):
+    id: int
+    title: str
+    isbn: str
+    annotation: Optional[str]
+    publication_year: int
+
+    availability: BookAvailability
+    libraries: List[LibraryAvailability] = []
+
+
+class BookSearchResponse(BaseModel):
+    items: list[BookSearchItem]
+
+    total: int
+    limit: int
+    offset: int
+    returned: int
+
+
+class BookDeleteResponse(BaseModel):
+    status: str
+
+
+class BookDeleteWarning(BaseModel):
+    warning: str
+    copies_count: int | None = None
+    message: str
+    blocked_reason: Optional[str] = None
