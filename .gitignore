@@ -1,3 +1,4 @@
 .env
 obeliskvenv
 __pycache__/
+.pytest_cache
