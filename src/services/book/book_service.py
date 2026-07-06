@@ -559,6 +559,29 @@ async def get_book(
 
         copy_ids = [c.id for c in copies]
 
+        # copy positions and shelves
+        copy_positions = {}
+        if copy_ids:
+            pos_rows = (await session.exec(
+                select(BookPosition, DimShelf)
+                .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
+                .where(BookPosition.book_copy_id.in_(copy_ids))
+            )).all()
+
+            for pos, shelf in pos_rows:
+                copy_positions[pos.book_copy_id] = {
+                    "shelf": {
+                        "id": shelf.id,
+                        "code": shelf.code,
+                        "section": shelf.section
+                    },
+                    "position": {
+                        "row": pos.row,
+                        "column": pos.column,
+                        "depth": pos.depth
+                    }
+                }
+
         # =========================
         # 7. LOANS + AVAILABILITY
         # =========================
@@ -672,7 +695,9 @@ async def get_book(
                 {
                     "id": c.id,
                     "inventory_code": c.inventory_code,
-                    "condition": c.condition
+                    "condition": c.condition,
+                    "shelf": copy_positions.get(c.id, {}).get("shelf"),
+                    "position": copy_positions.get(c.id, {}).get("position")
                 }
                 for c in copies
             ],

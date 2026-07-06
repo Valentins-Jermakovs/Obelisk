@@ -134,6 +134,24 @@ async def _create_copies(session: AsyncSession, book_id: int, copies: list):
                 detail=f"Shelf {c.position.shelf_id} not found"
             )
 
+        # check inventory code uniqueness within the same library
+        existing_copy = (await session.exec(
+            select(DimBookCopy)
+            .join(BookPosition, BookPosition.book_copy_id == DimBookCopy.id)
+            .where(
+                DimBookCopy.inventory_code == c.inventory_code.strip(),
+                BookPosition.shelf_id.in_(
+                    select(DimShelf.id).where(DimShelf.library_id == shelf.library_id)
+                )
+            )
+        )).first()
+
+        if existing_copy:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Inventory code '{c.inventory_code}' already exists in library {shelf.library_id}"
+            )
+
         # create copy
         copy = DimBookCopy(
             book_id=book_id,

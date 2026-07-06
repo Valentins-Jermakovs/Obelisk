@@ -97,10 +97,24 @@ class ImageRead(BaseModel):
     display_order: int
 
 
+class BookPositionRead(BaseModel):
+    row: Optional[int] = None
+    column: Optional[int] = None
+    depth: Optional[int] = None
+
+
+class ShelfShort(BaseModel):
+    id: int
+    code: str
+    section: Optional[str] = None
+
+
 class CopyRead(BaseModel):
     id: int
     inventory_code: str
     condition: str
+    shelf: Optional[ShelfShort] = None
+    position: Optional[BookPositionRead] = None
 
 
 class BookAvailability(BaseModel):

@@ -30,5 +30,5 @@ class DimBookCopy(SQLModel, table=True):
             index=True
         )
     )
-    inventory_code: str = Field(index=True, unique=True)
+    inventory_code: str = Field(index=True)
     condition: BookCondition = Field(default=BookCondition.GOOD)

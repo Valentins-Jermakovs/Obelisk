@@ -29,6 +29,7 @@ from services.book.book_service import (
 async def test_book_crud_flow():
     # initialize DB on the same engine used by AsyncSessionLocal
     async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
@@ -80,6 +81,8 @@ async def test_book_crud_flow():
         bk = await get_book(session, book.id)
         assert bk['id'] == book.id
         assert 'libraries' in bk
+        assert bk['copies'][0]['shelf'] is not None
+        assert bk['copies'][0]['position'] is not None
 
         # update
         from schemas.book import BookUpdate
@@ -90,3 +93,57 @@ async def test_book_crud_flow():
         # delete (force)
         delr = await delete_book(session, book.id, force=True)
         assert delr.get('status') == 'deleted'
+
+
+@pytest.mark.asyncio
+async def test_inventory_code_allowed_in_different_libraries():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Library Author')
+        genre = DimGenre(name='Library Genre')
+        language = DimLanguage(code='ru', name='Russian')
+        library1 = DimLibrary(name='Library One', city='CityA', address='Address A')
+        library2 = DimLibrary(name='Library Two', city='CityB', address='Address B')
+
+        session.add_all([author, genre, language, library1, library2])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library1)
+        await session.refresh(library2)
+
+        shelf1 = DimShelf(library_id=library1.id, code='A1')
+        shelf2 = DimShelf(library_id=library2.id, code='B1')
+        session.add_all([shelf1, shelf2])
+        await session.commit()
+        await session.refresh(shelf1)
+        await session.refresh(shelf2)
+
+        book1 = await create_book(session, BookCreate(
+            title='Book A',
+            isbn='ISBN-A-1',
+            annotation='A',
+            publication_year=2021,
+            authors=[author.id],
+            genres=[genre.id],
+            languages=[language.id],
+            copies=[BookCopyCreate(inventory_code='INV-100', condition='good', position=BookPositionCreate(shelf_id=shelf1.id))]
+        ))
+
+        book2 = await create_book(session, BookCreate(
+            title='Book B',
+            isbn='ISBN-B-1',
+            annotation='B',
+            publication_year=2022,
+            authors=[author.id],
+            genres=[genre.id],
+            languages=[language.id],
+            copies=[BookCopyCreate(inventory_code='INV-100', condition='good', position=BookPositionCreate(shelf_id=shelf2.id))]
+        ))
+
+        assert book1.id is not None
+        assert book2.id is not None
