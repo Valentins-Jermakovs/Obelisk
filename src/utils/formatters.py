@@ -1,6 +1,6 @@
-
-# Formatters help functions to work with data
-
+# ==============================================
+#  Formatters help functions to work with data
+# ==============================================
 
 # Format the full name
 def format_full_name(name: str) -> str:

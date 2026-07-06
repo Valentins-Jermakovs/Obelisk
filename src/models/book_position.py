@@ -1,10 +1,15 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from sqlmodel import SQLModel, Field
 from sqlalchemy import ForeignKey, Column
-# =====================================================
 
+
+
+# =====================================================
+#                       models
+# =====================================================
 
 # Book physical position model
 class BookPosition(SQLModel, table=True):

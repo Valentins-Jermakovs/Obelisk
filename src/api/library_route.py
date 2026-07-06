@@ -25,38 +25,52 @@ from services.library_service import (
     delete_library
 )
 # Utils:
-from utils.token_utils import admin_required
-# ===================================================
+from utils.token_utils import admin_required, validate_token
 
 
-# Router
+
+# Router object for export
 router = APIRouter(
     prefix="/libraries",
-    tags=["Libraries"]
+    tags=["Libraries endpoints - [create, read, update, delete]"]
 )
 
 
 # ==================================================
-#                     routes
+#       routes - create, read, update, delete
 # ==================================================
 
-# Create
-@router.post("/", response_model=LibraryRead, status_code=201)
+# Create library
+# Administrator role required
+@router.post(
+    "/", 
+    response_model=LibraryRead,
+    summary="Create a library, Admin required"
+)
 async def create_library_route(
     data: LibraryCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await create_library(session, data)
+    return await create_library(
+        session=session, 
+        data_in=data
+    )
 
 
-# Search
-@router.get("/search", response_model=LibrarySearchResponse)
+# Search library by name, city, address
+# Can access everyone
+@router.get(
+    "/search", 
+    response_model=LibrarySearchResponse,
+    summary="Search library by name, city, address"
+)
 async def search_libraries_route(
     q: str | None = None,
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
     return await search_libraries(
         session=session,
@@ -66,31 +80,50 @@ async def search_libraries_route(
     )
 
 
-# Get by ID
-@router.get("/{library_id}", response_model=LibraryRead)
+# Get library by ID
+# Can access everyone
+@router.get(
+    "/{library_id}", 
+    response_model=LibraryRead,
+    summary="Get library by ID"
+)
 async def get_library_route(
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await get_library(session, library_id)
+    return await get_library(
+        session=session, 
+        library_id=library_id
+    )
 
 
-# Update
-@router.patch("/{library_id}", response_model=LibraryRead)
+# Update library by ID
+# Administrator role required
+@router.patch(
+    "/{library_id}", 
+    response_model=LibraryRead,
+    summary="Update a library, Admin required"
+)
 async def update_library_route(
     library_id: int,
     data: LibraryUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await update_library(session, library_id, data)
+    return await update_library(
+        session=session, 
+        library_id=library_id, 
+        data_in=data
+    )
 
 
-# Delete
+# Delete library by ID
+# Administrator role required
 @router.delete(
     "/{library_id}",
-    response_model=Union[LibraryDeleteResponse, LibraryDeleteWarning]
+    response_model=Union[LibraryDeleteResponse, LibraryDeleteWarning],
+    summary="Delete library by ID, set force=True to delete entities, Admin required"
 )
 async def delete_library_route(
     library_id: int,

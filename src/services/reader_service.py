@@ -3,8 +3,7 @@
 # =====================================================
 # Libraries:
 from fastapi import HTTPException
-from sqlmodel import select, or_
-from sqlalchemy import func
+from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
 # Models:
@@ -13,11 +12,11 @@ from models import DimReader, FactLoan, LoanStatus
 from schemas.reader import ReaderCreate, ReaderUpdate
 # Utils:
 from utils.formatters import format_full_name
-# =====================================================
+
 
 
 # ===================================================
-#                       functions
+#      Service code - create, update, get, delete
 # ===================================================
 
 # Create reader
@@ -25,8 +24,10 @@ async def create_reader(
     session: AsyncSession,
     data_in: ReaderCreate
 ):
+    # Normalize the name of the READER to UPP
     email = data_in.email.strip().lower()
 
+    # Check the format of the EMAIL
     email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
     if not re.match(email_regex, email):
         raise HTTPException(
@@ -34,6 +35,7 @@ async def create_reader(
             detail="Invalid email"
         )
 
+    # Check if the EMAIL already exists
     existing = (
         await session.exec(
             select(DimReader).where(
@@ -48,11 +50,13 @@ async def create_reader(
             detail="Reader already exists"
         )
 
+    # Create the new READER
     reader = DimReader(
         full_name=format_full_name(data_in.full_name),
         email=email
     )
 
+    # Add the new READER to the database
     session.add(reader)
     await session.commit()
     await session.refresh(reader)
@@ -64,12 +68,13 @@ async def create_reader(
     }
 
 
-# Update reader
+# Update reader by ID
 async def update_reader(
     session: AsyncSession,
     reader_id: int,
     data_in: ReaderUpdate
 ):
+    # Get the reader by ID
     reader = await session.get(DimReader, reader_id)
 
     if not reader:
@@ -78,12 +83,15 @@ async def update_reader(
             detail="Reader not found"
         )
 
+    # Translate data to model fields
     data = data_in.model_dump(exclude_unset=True)
 
     # Update email
     if "email" in data:
+        # Remove leading and trailing spaces from the email
         email = data["email"].strip().lower()
 
+        # Check the format of the email
         email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
         if not re.match(email_regex, email):
             raise HTTPException(
@@ -91,6 +99,7 @@ async def update_reader(
                 detail="Invalid email"
             )
 
+        # Check for uniqueness of the email
         existing = (
             await session.exec(
                 select(DimReader).where(
@@ -112,6 +121,8 @@ async def update_reader(
     if "full_name" in data:
         reader.full_name = format_full_name(data["full_name"])
 
+
+    # Update READER
     await session.commit()
     await session.refresh(reader)
 
@@ -121,16 +132,17 @@ async def update_reader(
         "email": reader.email
     }
 
-# Search reader
+# Search reader by email, full_name
 async def search_readers(
     session: AsyncSession,
     query: str | None = None,
     limit: int = 10,
     offset: int = 0
 ):
+    # Create a query
     base_stmt = select(DimReader)
 
-    # фильтрация только если есть запрос
+    # Query by email or full_name
     if query and query.strip():
         q = query.strip().lower()
 
@@ -141,11 +153,11 @@ async def search_readers(
             )
         )
 
-    # total count
+    # Total count
     total_stmt = select(func.count()).select_from(base_stmt.subquery())
     total = (await session.exec(total_stmt)).one()
 
-    # pagination
+    # Pagination
     stmt = base_stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     readers = result.all()
@@ -166,11 +178,12 @@ async def search_readers(
     }
 
 
-# Delete reader
+# Delete reader by ID
 async def delete_reader(
     session: AsyncSession,
     reader_id: int
 ):
+    # Get reader by ID
     reader = await session.get(DimReader, reader_id)
 
     if not reader:
@@ -179,6 +192,7 @@ async def delete_reader(
             detail="Reader not found"
         )
 
+    # Get reader linked Loans
     loans = (
         await session.exec(
             select(FactLoan).where(
@@ -187,6 +201,7 @@ async def delete_reader(
         )
     ).all()
 
+    # Check if reader has active, overdue or lost loans
     if any(
         loan.status in (
             LoanStatus.ACTIVE,
@@ -200,12 +215,14 @@ async def delete_reader(
             detail="Reader has active loans"
         )
 
+    # Check if reader has unpaid fines
     if any(loan.fine_amount > 0 for loan in loans):
         raise HTTPException(
             status_code=409,
             detail="Reader has unpaid fines"
         )
 
+    # Delete reader from the database
     await session.delete(reader)
     await session.commit()
 

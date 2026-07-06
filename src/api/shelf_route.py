@@ -4,12 +4,17 @@
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
-# Database:
+# Dependencies:
 from config.db_dependency import get_db
 # Utils:
-from utils.token_utils import validate_token
+from utils.token_utils import validate_token, librarian_required
 # Schemas:
-from schemas.shelf import ShelfCreate, ShelfUpdate, ShelfRead, ShelfSearchResponse
+from schemas.shelf import (
+    ShelfCreate, 
+    ShelfUpdate, 
+    ShelfRead, 
+    ShelfSearchResponse
+)
 # Services:
 from services.shelf_service import (
     create_shelf,
@@ -17,46 +22,54 @@ from services.shelf_service import (
     delete_shelf,
     search_shelves
 )
-# =====================================================
 
 
-# =====================================================
-#                       Router
-# =====================================================
+# Router object for export
 router = APIRouter(
     prefix="/shelves", 
-    tags=["Shelves"]
+    tags=["Shelves endpoints - [create, read, update, delete]"]
 )
 
 
-# =====================================================
-#                       Endpoints
-# =====================================================
+# ==================================================
+#       routes - create, read, update, delete
+# ==================================================
 
-# Create
-@router.post("", response_model=ShelfRead)
+# Create a shelf in library
+# Librarian role required
+@router.post(
+    "/", 
+    response_model=ShelfRead,
+    summary="Create a shelf, Librarian required"
+)
 async def create(
     data: ShelfCreate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(validate_token)
+    payload: dict = Depends(librarian_required)
 ):
     return await create_shelf(
-        session,
-        data.library_id,
-        data.code,
-        data.section,
-        payload
+        session=session,
+        library_id=data.library_id,
+        code=data.code,
+        section=data.section,
+        payload=payload
     )
 
 
-# Search
-@router.get("", response_model=ShelfSearchResponse)
+# Search shelves in library
+# Can access to all users
+@router.get(
+    "/search", 
+    response_model=ShelfSearchResponse,
+    summary="Search shelves in library by libray ID and other parameters"
+)
 async def search(
     library_id: int,
     q: str | None = None,
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
     return await search_shelves(
         session=session,
@@ -67,25 +80,34 @@ async def search(
     )
 
 
-# Update
-@router.patch("/{shelf_id}", response_model=ShelfRead)
+# Update a shelf in library
+# Librarian role required
+@router.patch(
+    "/{shelf_id}", 
+    response_model=ShelfRead,
+    summary="Update a shelf in library by ID, Librarian required"
+)
 async def update(
     shelf_id: int,
     data: ShelfUpdate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(validate_token)
+    payload: dict = Depends(librarian_required)
 ):
     return await update_shelf(
-        session,
-        shelf_id,
-        data.code,
-        data.section,
-        payload
+        session=session,
+        shelf_id=shelf_id,
+        code=data.code,
+        section=data.section,
+        payload=payload
     )
 
 
-# Delete
-@router.delete("/{shelf_id}")
+# Delete shelf by ID
+# Librarian role required
+@router.delete(
+    "/{shelf_id}",
+    summary="Delete shelf by ID, set force=True to delete entities, Admin required"
+)
 async def delete(
     shelf_id: int,
     force: bool = Query(False),

@@ -26,7 +26,7 @@ from models import (
     BookGenre,
     BookLanguage
 )
-# =====================================================
+
 
 
 # =====================================================
@@ -49,6 +49,7 @@ engine = create_async_engine(
 # =====================================================
 #                   DB initialization
 # =====================================================
+
 async def init_db():
 
     async with engine.begin() as conn:

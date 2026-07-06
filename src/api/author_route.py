@@ -5,7 +5,9 @@
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
+# Dependencies:
 from config.db_dependency import get_db
+# Schemas
 from schemas.author import (
     AuthorCreate,
     AuthorUpdate,
@@ -22,33 +24,51 @@ from services.author_service import (
     delete_author
 )
 # Utils:
-from utils.token_utils import admin_required, admin_or_librarian_required
-# ==================================================
+from utils.token_utils import (
+    admin_required, 
+    admin_or_librarian_required
+)
 
 
-# Router
+
+# Router object for export
 router = APIRouter(
     prefix="/authors",
-    tags=["Authors"]
+    tags=["Authors endpoints - [create, read, update, delete]"]
 )
 
 
 # ==================================================
-#                     routes
+#       routes - create, read, update, delete
 # ==================================================
 
-# Create author
-@router.post("/", response_model=AuthorRead, status_code=201)
+# Create author - create a new author
+# Return id, name, city, birth_year
+# Administrator role required
+@router.post(
+    "/", 
+    response_model=AuthorRead,
+    summary="Create author, Admin required"
+)
 async def create_author_route(
     author: AuthorCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await create_author(session, author)
+    return await create_author(
+        session=session, 
+        author_data=author
+    )
 
 
-# Search author
-@router.get("/search", response_model=AuthorSearchResponse)
+# Search author - search for authors by name or country, birth_year
+# Return list of authors with meta data about pagination
+# Administrator or librarian role required
+@router.get(
+    "/search", 
+    response_model=AuthorSearchResponse, 
+    summary="Search author, Admin or Librarian required"
+)
 async def search_authors_route(
     q: str | None = None,
     limit: int = 10,
@@ -63,10 +83,14 @@ async def search_authors_route(
         offset=offset
     )
 
-# Update author
+
+# Update author - update an existing author by id
+# Return updated author
+# Administrator role required
 @router.patch(
     "/{author_id}",
-    response_model=AuthorRead
+    response_model=AuthorRead,
+    summary="Update author, Admin required"
 )
 async def update_author_route(
     author_id: int,
@@ -81,10 +105,14 @@ async def update_author_route(
     )
 
 
-# Delete author
+# Delete author - delete an existing author by id
+# Return message or warning, use force=True, 
+# to delete the author with entities (CASCADE)
+# Administrator role required
 @router.delete(
     "/{author_id}",
-    response_model=Union[AuthorDeleteResponse, AuthorDeleteWarning]
+    response_model=Union[AuthorDeleteResponse, AuthorDeleteWarning],
+    summary="Delete author, set force=True to delete entities, Admin required"
 )
 async def delete_author_route(
     author_id: int,

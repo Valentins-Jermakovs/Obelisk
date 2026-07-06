@@ -8,26 +8,28 @@ from fastapi import APIRouter, Depends
 from schemas.metrics import SystemMetrics
 # Utils:
 from utils.token_utils import admin_required
-# =========================================================================
 
-# =========================================================================
-#                                Router
-# =========================================================================
-# Router object
+
+# Router object for export
 router = APIRouter(
     prefix="/metrics",
     tags=["Metrics services"],
 )
 
-# =========================================================================
-#                               Endpoints
-# =========================================================================
-# =============== Endpoint for getting metrics =============================
-@router.get("/stats", response_model=SystemMetrics)
+# ==================================================
+#       routes - metric and audit data
+# ==================================================
+
+# Return server metric data
+# Administrator required
+@router.get(
+    "/stats", 
+    response_model=SystemMetrics,
+    summary="Return server metric data, Admin required"
+)
 async def metrics(
     payload: dict = Depends(admin_required)
 ):
-
     # Return current system metrics
     return SystemMetrics(
         cpu_percent=psutil.cpu_percent(),

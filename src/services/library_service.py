@@ -1,22 +1,24 @@
-
-
 # ====================================================
 #                       imports
 # ====================================================
 # Libraries:
-from sqlmodel import select, or_
-from sqlalchemy import func
+from sqlmodel import select, or_, func
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Models:
-from models import DimLibrary, DimShelf, FactLoan, LibrarianLibrary
+from models import (
+    DimLibrary, 
+    DimShelf, 
+    FactLoan, 
+    LibrarianLibrary
+)
 # Schemas:
 from schemas.library import LibraryCreate, LibraryUpdate
-# ====================================================
+
 
 
 # ===================================================
-#                       functions
+#      Service code - create, update, get, delete
 # ===================================================
 
 # Normalize library data
@@ -47,22 +49,25 @@ async def create_library(
     session: AsyncSession, 
     data_in: LibraryCreate
 ):
-
+    # Normalize the data for storage in the database
     data = normalize_library(data_in.model_dump())
 
-    # unique check
+    # Unique check
     stmt = select(DimLibrary).where(
         DimLibrary.name == data["name"]
     )
 
+    # Check for a duplicate library
     if (await session.exec(stmt)).first():
         raise HTTPException(
             status_code=409, 
             detail="Library already exists"
         )
 
+    # Create a new library instance
     library = DimLibrary(**data)
 
+    # Add the library to the session and commit it
     session.add(library)
     await session.commit()
     await session.refresh(library)
@@ -77,9 +82,10 @@ async def search_libraries(
     limit: int = 10,
     offset: int = 0
 ):
+    # Create a query statement
     stmt = select(DimLibrary)
 
-    # optional filtering
+    # Optional filtering - name/city/address
     if query:
         q = query.strip().lower()
 
@@ -92,11 +98,11 @@ async def search_libraries(
                 )
             )
 
-    # total count (with or without filter)
+    # Total count (with or without filter)
     total_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await session.exec(total_stmt)).one()
 
-    # pagination
+    # Pagination
     stmt = stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     libraries = result.all()
@@ -109,12 +115,13 @@ async def search_libraries(
         "returned": len(libraries)
     }
 
+
 # Get library by ID
 async def get_library(
     session: AsyncSession, 
     library_id: int
 ):
-
+    # Get the library by ID
     library = await session.get(DimLibrary, library_id)
 
     if not library:
@@ -126,21 +133,22 @@ async def get_library(
     return format_library(library)
 
 
-# Update library
+# Update library by ID
 async def update_library(
     session: AsyncSession, 
     library_id: int, 
     data_in: LibraryUpdate
 ):
-
+    # Get the library by ID
     library = await session.get(DimLibrary, library_id)
 
     if not library:
         raise HTTPException(404, "Library not found")
 
+    # Normalize the data
     data = normalize_library(data_in.model_dump(exclude_unset=True))
 
-    # unique name check
+    # Unique name check
     if "name" in data:
         stmt = select(DimLibrary).where(
             DimLibrary.name == data["name"],
@@ -153,22 +161,24 @@ async def update_library(
                 detail="Library name already exists"
             )
 
+    # Update the library attributes
     for k, v in data.items():
         setattr(library, k, v)
 
+    # Commit the changes
     await session.commit()
     await session.refresh(library)
 
     return format_library(library)
 
 
-# Delete library
+# Delete library by ID
 async def delete_library(
     session: AsyncSession,
     library_id: int,
     force: bool = False
 ):
-
+    # Check if the library exists
     library = await session.get(DimLibrary, library_id)
 
     if not library:

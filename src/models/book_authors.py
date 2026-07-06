@@ -1,10 +1,14 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, ForeignKey
-# =====================================================
 
+
+# =====================================================
+#                       models
+# =====================================================
 
 # Book <-> Author association table
 class BookAuthor(SQLModel, table=True):

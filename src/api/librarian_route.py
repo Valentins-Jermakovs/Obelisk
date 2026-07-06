@@ -19,56 +19,86 @@ from services.librarian_service import (
 from schemas.librarian import (
     LibrarianCreate,
     LibrarianUpdate,
-    LibrarianWithLibraries,
     LibrarianSearchResponse
 )
 # Utils:
-from utils.token_utils import admin_required
-# =====================================================
+from utils.token_utils import admin_required, validate_token
 
 
-# Router
+
+# Router object for export
 router = APIRouter(
     prefix="/librarians",
-    tags=["Librarians"]
+    tags=["Librarians endpoints - [create, read, update, delete]"]
 )
 
 
 # ==================================================
-#                     routes
+#       routes - create, read, update, delete
 # ==================================================
 
-# Create
-@router.post("")
+# Create librarian
+# Return a librarian object
+# Everyone can be accessed to this route - Mostly automatically
+@router.post(
+    "/", 
+    summary="Create librarian, no role required"
+)
 async def create(
     data: LibrarianCreate,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
-    return await create_librarian(session, data)
+    return await create_librarian(
+        session=session, 
+        data_in=data
+    )
 
 
-# Update
-@router.patch("/{librarian_id}")
+# Update librarian
+# Everyone can be accessed to this route - Mostly automatically
+@router.patch(
+    "/{librarian_id}", 
+    summary="Update librarian, no role required"
+)
 async def update(
     librarian_id: int,
     data: LibrarianUpdate,
-    session: AsyncSession = Depends(get_db)
+    session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
-    return await update_librarian(session, librarian_id, data)
+    return await update_librarian(
+        session=session, 
+        librarian_id=librarian_id, 
+        data_in=data
+    )
 
-# Link library
-@router.post("/{librarian_id}/libraries/{library_id}")
+# Link library with librarian
+# Administrator role required
+@router.post(
+    "/{librarian_id}/libraries/{library_id}",
+    summary="Update librarian, Admin role required"
+)
 async def link_library(
     librarian_id: int,
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await add_librarian_to_library(session, librarian_id, library_id)
+    return await add_librarian_to_library(
+        session=session, 
+        librarian_id=librarian_id, 
+        library_id=library_id
+    )
 
 
-# Search
-@router.get("/search", response_model=LibrarianSearchResponse)
+# Search librarian by name or email
+# Administrator role required
+@router.get(
+    "/search", 
+    response_model=LibrarianSearchResponse,
+    summary="Search librarian, Admin role required"
+)
 async def search(
     query: str | None = None,
     limit: int = Query(10, ge=1, le=50),
@@ -84,22 +114,37 @@ async def search(
     )
 
 
-# Unlink library
-@router.delete("/{librarian_id}/libraries/{library_id}")
+# Unlink library and librarian
+# Administrator role required
+@router.delete(
+    "/{librarian_id}/libraries/{library_id}",
+    summary="Delete link between library and librarian, Admin role required"
+)
 async def unlink_library(
     librarian_id: int,
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await remove_librarian_from_library(session, librarian_id, library_id)
+    return await remove_librarian_from_library(
+        session=session, 
+        librarian_id=librarian_id, 
+        library_id=library_id
+    )
 
 
-# Delete librarian
-@router.delete("/{librarian_id}")
+# Delete librarian by ID
+# Administrator role required
+@router.delete(
+    "/{librarian_id}",
+    summary="Delete librarian by ID, set force=True to delete entities, Admin required"
+)
 async def delete(
     librarian_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await delete_librarian(session, librarian_id)
+    return await delete_librarian(
+        session=session, 
+        librarian_id=librarian_id
+    )

@@ -3,8 +3,7 @@
 # =====================================================
 # Libraries:
 from fastapi import HTTPException
-from sqlmodel import select, or_
-from sqlalchemy import func
+from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
 # Models:
@@ -13,11 +12,11 @@ from models import DimLibrarian, DimLibrary, LibrarianLibrary
 from schemas.librarian import LibrarianCreate, LibrarianUpdate
 # Utils:
 from utils.formatters import format_full_name, format_library, format_librarian
-# =====================================================
+
 
 
 # ===================================================
-#                       functions
+#      Service code - create, update, get, delete
 # ===================================================
 
 
@@ -26,8 +25,10 @@ async def create_librarian(
     session: AsyncSession, 
     data_in: LibrarianCreate
 ):
+    # Normalize the name of the LIBRARIAN to UPPERCASE and STRIP whitespace
     email = data_in.email.strip().lower()
 
+    # Validate the email format
     email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
     if not re.match(email_regex, email):
         raise HTTPException(
@@ -35,6 +36,7 @@ async def create_librarian(
             detail="Invalid email"
         )
 
+    # Try to find an existing LIBRARIAN
     result = await session.exec(
         select(DimLibrarian).where(DimLibrarian.email == email)
     )
@@ -44,11 +46,13 @@ async def create_librarian(
             detail="Librarian already exists"
         )
 
+    # Create a new LIBRARIAN
     librarian = DimLibrarian(
         full_name=format_full_name(data_in.full_name),
         email=email
     )
 
+    # Write the new LIBRARIAN to the database
     session.add(librarian)
     await session.commit()
     await session.refresh(librarian)
@@ -56,12 +60,13 @@ async def create_librarian(
     return format_librarian(librarian)
 
 
-# Update librarian
+# Update librarian by ID
 async def update_librarian(
     session: AsyncSession, 
     librarian_id: int, 
     data_in: LibrarianUpdate
 ):
+    # Get the librarian by ID
     librarian = await session.get(DimLibrarian, librarian_id)
 
     if not librarian:
@@ -70,12 +75,14 @@ async def update_librarian(
             detail="Librarian not found"
         )
 
+    # Translate the data to a dictionary
     data = data_in.model_dump(exclude_unset=True)
 
-    # email update
+    # Email update
     if "email" in data:
         email = data["email"].strip().lower()
 
+        # Validate the email format
         email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
         if not re.match(email_regex, email):
             raise HTTPException(
@@ -83,6 +90,7 @@ async def update_librarian(
                 detail="Invalid email"
             )
 
+        # Check for duplicate emails
         result = await session.exec(
             select(DimLibrarian).where(
                 DimLibrarian.email == email,
@@ -97,10 +105,12 @@ async def update_librarian(
 
         librarian.email = email
 
-    # name update
+    # Name update
     if "full_name" in data:
         librarian.full_name = format_full_name(data["full_name"])
 
+
+    # Update the librarian in the database
     await session.commit()
     await session.refresh(librarian)
 
@@ -108,20 +118,27 @@ async def update_librarian(
 
 
 # Assign librarian to library
-async def add_librarian_to_library(session, librarian_id: int, library_id: int):
+async def add_librarian_to_library(
+    session, 
+    librarian_id: int, 
+    library_id: int
+):
 
+    # Check for librarian and library existence
     if not await session.get(DimLibrarian, librarian_id):
         raise HTTPException(
             status_code=404, 
             detail="Librarian not found"
         )
 
+    # Check for librarian and library existence
     if not await session.get(DimLibrary, library_id):
         raise HTTPException(
             status_code=404, 
             detail="Library not found"
         )
 
+    # Check if the librarian is already assigned to the library
     result = await session.exec(
         select(LibrarianLibrary).where(
             LibrarianLibrary.librarian_id == librarian_id,
@@ -131,11 +148,13 @@ async def add_librarian_to_library(session, librarian_id: int, library_id: int):
     if result.first():
         return {"message": "already linked"}
 
+    # Create a new librarian library relationship
     session.add(LibrarianLibrary(
         librarian_id=librarian_id,
         library_id=library_id
     ))
 
+    # Commit the changes to the database
     await session.commit()
     return {"status": "linked"}
 
@@ -147,9 +166,10 @@ async def search_librarians_with_libraries(
     limit: int = 10,
     offset: int = 0
 ):
+    # Create a statement to retrieve all librarian libraries
     stmt = select(DimLibrarian)
 
-    # filtering
+    # Filtering
     if query:
         q = query.strip().lower()
         if q:
@@ -160,17 +180,17 @@ async def search_librarians_with_libraries(
                 )
             )
 
-    # total count
+    # Total count
     total_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await session.exec(total_stmt)).one()
 
-    # pagination
+    # Pagination
     stmt = stmt.offset(offset).limit(limit)
     librarians = (await session.exec(stmt)).all()
 
     librarian_ids = [l.id for l in librarians]
 
-    # bulk fetch links
+    # Bulk fetch links
     links = (await session.exec(
         select(LibrarianLibrary).where(
             LibrarianLibrary.librarian_id.in_(librarian_ids)
@@ -179,7 +199,7 @@ async def search_librarians_with_libraries(
 
     library_ids = list(set([l.library_id for l in links]))
 
-    # bulk fetch libraries
+    # Bulk fetch libraries
     libraries = {}
     if library_ids:
         libs = (await session.exec(
@@ -188,7 +208,7 @@ async def search_librarians_with_libraries(
 
         libraries = {l.id: l for l in libs}
 
-    # group libraries per librarian
+    # Group libraries per librarian
     grouped = {lid: [] for lid in librarian_ids}
 
     for link in links:
@@ -197,7 +217,7 @@ async def search_librarians_with_libraries(
                 libraries[link.library_id]
             )
 
-    # final result
+    # Final result
     return {
         "items": [
             {
@@ -223,7 +243,7 @@ async def remove_librarian_from_library(
     librarian_id: int, 
     library_id: int
 ):
-
+    # Get the link between librarian and library
     result = await session.exec(
         select(LibrarianLibrary).where(
             LibrarianLibrary.librarian_id == librarian_id,
@@ -232,12 +252,14 @@ async def remove_librarian_from_library(
     )
     link = result.first()
 
+    # If the link exists, remove it
     if not link:
         raise HTTPException(
             status_code=404, 
             detail="Link not found"
         )
 
+    # Remove the link
     await session.delete(link)
     await session.commit()
 
@@ -249,9 +271,10 @@ async def delete_librarian(
     session: AsyncSession, 
     librarian_id: int
 ):
-
+    # Get the librarian
     librarian = await session.get(DimLibrarian, librarian_id)
 
+    # If the librarian exists, remove it, else raise an exception
     if not librarian:
         raise HTTPException(
             status_code=404, 

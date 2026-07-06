@@ -1,10 +1,13 @@
 # ==================================================
 #                     imports
 # ==================================================
+# Libraries:
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
+# Dependencies:
 from config.db_dependency import get_db
+# Schemas:
 from schemas.book import (
     BookCreate,
     BookUpdate,
@@ -22,23 +25,31 @@ from services.book.book_service import (
     get_book
 )
 # Utils:
-from utils.token_utils import admin_required, admin_or_librarian_required
-# ==================================================
+from utils.token_utils import (
+    admin_or_librarian_required,
+    validate_token
+)
 
 
-# Router
+# Router object for export
 router = APIRouter(
     prefix="/books",
-    tags=["Books"]
+    tags=["Books endpoint - [create, read, update, delete]"]
 )
 
 
 # ==================================================
-#                     routes
+#       routes - create, read, update, delete
 # ==================================================
 
-# Create book
-@router.post("/", response_model=BookRead, status_code=201)
+# Create book - create a new book
+# Return a book object
+# Administrator or librarian role required
+@router.post(
+    "/", 
+    response_model=BookRead,
+    summary="Create book, Admin or Librarian required"
+)
 async def create_book_route(
     book: BookCreate,
     session: AsyncSession = Depends(get_db),
@@ -48,14 +59,20 @@ async def create_book_route(
     return await get_book(session, book_obj.id)
 
 
-# Search books
-@router.get("/search", response_model=BookSearchResponse)
+# Search books - search books by title or author name
+# Return a list of books objects with meta data
+# Can access everyone
+@router.get(
+    "/search", 
+    response_model=BookSearchResponse,
+    summary="Search book by title, ISBN, or annotation, roles not required"
+)
 async def search_books_route(
     q: str | None = None,
     limit: int = 10,
     offset: int = 0,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
+    payload: dict = Depends(validate_token)
 ):
     return await search_books(
         session=session,
@@ -65,20 +82,28 @@ async def search_books_route(
     )
 
 
-# Get book
-@router.get("/{book_id}", response_model=BookRead)
+# Get book by ID - get a book object with meta data
+# Can access everyone
+@router.get(
+    "/{book_id}", 
+    response_model=BookRead,
+    summary="Search book by ID, roles not required"
+)
 async def get_book_route(
     book_id: int,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_or_librarian_required)
+    payload: dict = Depends(validate_token)
 ):
     return await get_book(session, book_id)
 
 
-# Update book
+# Update book - update a book object with meta data
+# Return a book object with meta data
+# Administrator or librarian role required
 @router.patch(
-    "/{book_id}",
-    response_model=BookRead
+    "/{book_id}", 
+    response_model=BookRead,
+    summary="Update book, Admin or Librarian required"
 )
 async def update_book_route(
     book_id: int,
@@ -95,10 +120,14 @@ async def update_book_route(
     return await get_book(session, book_id)
 
 
-# Delete book
+# Delete book - delete a book object with meta data
+# Return a message or warning
+# Use the `force` parameter to bypass the confirmation prompt
+# Administrator or librarian role required
 @router.delete(
     "/{book_id}",
-    response_model=Union[BookDeleteResponse, BookDeleteWarning]
+    response_model=Union[BookDeleteResponse, BookDeleteWarning],
+    summary="Delete book, set force=True to delete entities, Admin or Librarian required"
 )
 async def delete_book_route(
     book_id: int,

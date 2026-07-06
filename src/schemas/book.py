@@ -1,14 +1,16 @@
 # ===================================================
 #                       imports
 # ===================================================
+# Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional, List
+# Models:
 from models import BookImageType, BookCondition
-# ===================================================
 
 
+
 # ===================================================
-#               schemas - Create book
+#                      schemas
 # ===================================================
 
 # Images
@@ -73,23 +75,26 @@ class BookUpdate(BaseModel):
     copies: Optional[List[BookCopyCreate]] = None
 
 
-
+# Author short schema
 class AuthorShort(BaseModel):
     id: int
     name: str
 
 
+# Genre short schema
 class GenreShort(BaseModel):
     id: int
     name: str
 
 
+# Language short schema
 class LanguageShort(BaseModel):
     id: int
     code: str
     name: Optional[str] = None
 
 
+# Image short schema
 class ImageRead(BaseModel):
     id: int
     file_path: str
@@ -97,18 +102,21 @@ class ImageRead(BaseModel):
     display_order: int
 
 
+# Book position schema
 class BookPositionRead(BaseModel):
     row: Optional[int] = None
     column: Optional[int] = None
     depth: Optional[int] = None
 
 
+# Shelf short schema
 class ShelfShort(BaseModel):
     id: int
     code: str
     section: Optional[str] = None
 
 
+# Book copy read schema
 class CopyRead(BaseModel):
     id: int
     inventory_code: str
@@ -117,6 +125,7 @@ class CopyRead(BaseModel):
     position: Optional[BookPositionRead] = None
 
 
+# Book availability schema
 class BookAvailability(BaseModel):
     status: str
     total_copies: int
@@ -124,6 +133,7 @@ class BookAvailability(BaseModel):
     active_loans: int
 
 
+# Book read schema
 class BookRead(BaseModel):
     id: int
     title: str
@@ -144,7 +154,7 @@ class BookRead(BaseModel):
     libraries: List["LibraryAvailability"] = []
 
 
-
+# Library short schema
 class LibraryShort(BaseModel):
     id: int
     name: str
@@ -152,6 +162,7 @@ class LibraryShort(BaseModel):
     address: str
 
 
+# Library availability schema
 class LibraryAvailability(BaseModel):
     id: int
     name: str
@@ -163,6 +174,7 @@ class LibraryAvailability(BaseModel):
     active_loans: int
 
 
+# Book search schema
 class BookSearchItem(BaseModel):
     id: int
     title: str
@@ -174,6 +186,7 @@ class BookSearchItem(BaseModel):
     libraries: List[LibraryAvailability] = []
 
 
+# Book search response schema
 class BookSearchResponse(BaseModel):
     items: list[BookSearchItem]
 
@@ -183,10 +196,12 @@ class BookSearchResponse(BaseModel):
     returned: int
 
 
+# Book delete response schema
 class BookDeleteResponse(BaseModel):
     status: str
 
 
+# Book delete warning schema
 class BookDeleteWarning(BaseModel):
     warning: str
     copies_count: int | None = None

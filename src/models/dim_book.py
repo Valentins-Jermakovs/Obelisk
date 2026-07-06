@@ -1,15 +1,24 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+# Models:
 from .book_authors import BookAuthor
 from .book_genres import BookGenre
 from .book_languages import BookLanguage
+
+
+
+# =====================================================
+#                       models
 # =====================================================
 
 if TYPE_CHECKING:
     from .dim_author import DimAuthor
+    from .dim_genre import DimGenre
+    from .dim_language import DimLanguage
 
 
 # Book model
@@ -27,6 +36,7 @@ class DimBook(SQLModel, table=True):
     annotation: str | None = Field(default=None)
     publication_year: int
 
+    # Relationships
     authors: list["DimAuthor"] = Relationship(back_populates="books", link_model=BookAuthor)
     genres: list["DimGenre"] = Relationship(back_populates="books", link_model=BookGenre)
     languages: list["DimLanguage"] = Relationship(back_populates="books", link_model=BookLanguage)

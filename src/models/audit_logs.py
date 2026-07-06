@@ -1,13 +1,20 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Any
 from sqlalchemy import Column, JSON
 from enum import Enum
+
+
+
+# =====================================================
+#                       models
 # =====================================================
 
+# Entity types
 class EntityType(str, Enum):
     BOOK = "book"
     READER = "reader"

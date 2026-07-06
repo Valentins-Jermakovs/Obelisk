@@ -4,10 +4,15 @@
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
-# DB:
+# Dependencies:
 from config.db_dependency import get_db
 # Schemas
-from schemas.genre import GenreCreate, GenreUpdate, GenreRead, GenreSearchResponse
+from schemas.genre import (
+    GenreCreate, 
+    GenreUpdate, 
+    GenreRead, 
+    GenreSearchResponse
+)
 # Services
 from services.genre_service import (
     create_genre,
@@ -17,37 +22,46 @@ from services.genre_service import (
 )
 # Auth
 from utils.token_utils import admin_required, admin_or_librarian_required
-# =====================================================
 
 
-# =====================================================
-#                       Router
-# =====================================================
+
+# Router object for export
 router = APIRouter(
     prefix="/genres",
-    tags=["Genres"]
+    tags=["Genres endpoints - [create, read, update, delete]"]
 )
 
 
-# =====================================================
-#                       Endpoints
-# =====================================================
+# ==================================================
+#       routes - create, read, update, delete
+# ==================================================
 
-# Create genre
+# Create genre - create a new genre
+# Return a genre object
+# Administrator role required
 @router.post(
-    "",
-    response_model=GenreRead
+    "/", 
+    response_model=GenreRead,
+    summary="Create genre, Admin required"
 )
 async def create(
     data: GenreCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await create_genre(session, data)
+    return await create_genre(
+        session=session, 
+        data_in=data
+    )
 
 
-# Search genres
-@router.get("/search", response_model=GenreSearchResponse)
+# Search genres - get all genres from the database
+# Administrator or librarian role required
+@router.get(
+    "/search", 
+    response_model=GenreSearchResponse,
+    summary="Search genre, Admin or Librarian required"
+)
 async def search(
     query: str | None = None,
     limit: int = Query(10, ge=1, le=50),
@@ -63,10 +77,13 @@ async def search(
     )
 
 
-# Update genre
+# Update genre - update a genre object
+# Return a genre object
+# Administrator role required
 @router.patch(
     "/{genre_id}",
-    response_model=GenreRead
+    response_model=GenreRead,
+    summary="Update genre, Admin required"
 )
 async def update(
     genre_id: int,
@@ -74,15 +91,27 @@ async def update(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await update_genre(session, genre_id, data)
+    return await update_genre(
+        session=session, 
+        genre_id=genre_id,
+        data_in=data
+    )
 
 
-# Delete genre
-@router.delete("/{genre_id}")
+# Delete genre by id
+# Administrator role required
+@router.delete(
+    "/{genre_id}",
+    summary="Delete genre, set force=True to delete entities, Admin required"
+)
 async def delete(
     genre_id: int,
     force: bool = False,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await delete_genre(session, genre_id, force)
+    return await delete_genre(
+        session=session, 
+        genre_id=genre_id, 
+        force=force
+    )

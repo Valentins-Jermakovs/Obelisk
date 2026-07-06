@@ -1,13 +1,20 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraies:
 from sqlmodel import SQLModel, Field
 from datetime import datetime
 from typing import Optional
 from enum import Enum
 from sqlalchemy import ForeignKey, Column
+
+
+
+# =====================================================
+#                       models
 # =====================================================
 
+# Enum for loan status
 class LoanStatus(str, Enum):
     ACTIVE = "active"
     LOST = "lost"

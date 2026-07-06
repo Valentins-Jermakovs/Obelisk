@@ -1,9 +1,10 @@
 # ===================================================
 #                       imports
 # ===================================================
+# Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional
-# ===================================================
+
 
 
 
@@ -36,7 +37,7 @@ class AuthorRead(BaseModel):
         from_attributes = True
 
 
-# Author delete schema
+# Author delete response schema
 class AuthorDeleteResponse(BaseModel):
     status: str
 
@@ -47,7 +48,7 @@ class AuthorDeleteWarning(BaseModel):
     books_count: int
     message: str
 
-
+# Author search response schema
 class AuthorSearchResponse(BaseModel):
     items: list["AuthorRead"]
 

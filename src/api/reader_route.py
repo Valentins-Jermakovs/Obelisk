@@ -4,7 +4,7 @@
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
-# Database:
+# Dependencies:
 from config.db_dependency import get_db
 # Schemas:
 from schemas.reader import (
@@ -21,37 +21,51 @@ from services.reader_service import (
     delete_reader,
 )
 # Utils:
-from utils.token_utils import admin_or_librarian_required, admin_required
-# =====================================================
-
-
-# =====================================================
-#                       Router
-# =====================================================
-router = APIRouter(
-    prefix="/readers",
-    tags=["Reader services"],
+from utils.token_utils import (
+    admin_or_librarian_required, 
+    admin_required, 
+    validate_token
 )
 
 
-# =====================================================
-#                       Endpoints
-# =====================================================
+
+# Router object for export
+router = APIRouter(
+    prefix="/readers",
+    tags=["Reader endpoints - [create, read, update, delete]"],
+)
+
+
+# ==================================================
+#       routes - create, read, update, delete
+# ==================================================
 
 # Create reader
+# Everyone can be a reader
+# Need an email and fullname
 @router.post(
-    "",
-    response_model=ReaderRead
+    "/",
+    response_model=ReaderRead,
+    summary="Create a reader, no role required"
 )
 async def create(
     data: ReaderCreate,
     session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
-    return await create_reader(session, data)
+    return await create_reader(
+        session=session, 
+        data_in=data
+    )
 
 
-# Search readers
-@router.get("/search", response_model=ReaderSearchResponse)
+# Search readers by name or email
+# Administrator or Librarian required
+@router.get(
+    "/search", 
+    response_model=ReaderSearchResponse,
+    summary="Search readers by name or email, Admin or Librarian required"
+)
 async def search(
     query: str | None = None,
     limit: int = Query(10, ge=1, le=50),
@@ -67,26 +81,31 @@ async def search(
     )
 
 
-# Update reader
+# Update reader by ID
+# No role required
 @router.patch(
     "/{reader_id}",
-    response_model=ReaderRead
+    response_model=ReaderRead,
+    summary="Update a reader by ID, no role required",
 )
 async def update(
     reader_id: int,
     data: ReaderUpdate,
     session: AsyncSession = Depends(get_db),
+    payload: dict = Depends(validate_token)
 ):
     return await update_reader(
-        session,
-        reader_id,
-        data
+        session=session,
+        reader_id=reader_id,
+        data_in=data
     )
 
 
-# Delete reader
+# Delete reader by ID
+# Administrator role required
 @router.delete(
-    "/{reader_id}"
+    "/{reader_id}",
+    summary="Delete reader by ID, set force=True to delete entities, Admin required"
 )
 async def delete(
     reader_id: int,
@@ -94,6 +113,6 @@ async def delete(
     payload: dict = Depends(admin_required)
 ):
     return await delete_reader(
-        session,
-        reader_id
+        session=session,
+        reader_id=reader_id
     )

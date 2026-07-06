@@ -1,11 +1,16 @@
 # =====================================================
 #                       imports
 # =====================================================
+# Libraries:
 from enum import Enum
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, ForeignKey
-# =====================================================
 
+
+
+# =====================================================
+#                       models
+# =====================================================
 
 # Image type enum
 class BookImageType(str, Enum):

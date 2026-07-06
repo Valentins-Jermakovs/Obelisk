@@ -4,7 +4,7 @@
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
-# DB:
+# Dependencies:
 from config.db_dependency import get_db
 # Services:
 from services.language_service import (
@@ -14,42 +14,59 @@ from services.language_service import (
     delete_language
 )
 # Schemas
-from schemas.language import LanguageCreate, LanguageUpdate, LanguageRead, LanguageSearchResponse
+from schemas.language import (
+    LanguageCreate, 
+    LanguageUpdate, 
+    LanguageRead, 
+    LanguageSearchResponse
+)
 # Utils:
-from utils.token_utils import admin_required
-# =====================================================
+from utils.token_utils import admin_required, admin_or_librarian_required
 
 
-# =====================================================
-#                       Router
-# =====================================================
+
+# Router object for export
 router = APIRouter(
     prefix="/languages", 
-    tags=["Languages"]
+    tags=["Languages endpoints - [create, read, update, delete]"]
 )
 
-# =====================================================
-#                       Endpoints
-# =====================================================
+# ==================================================
+#       routes - create, read, update, delete
+# ==================================================
 
 # Create language
-@router.post("", response_model=LanguageRead)
+# Return language object
+# Administrator role required
+@router.post(
+    "/", 
+    response_model=LanguageRead,
+    summary="Create language, Admin required"
+)
 async def create(
     data: LanguageCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await create_language(session, data)
+    return await create_language(
+        session=session, 
+        data_in=data
+    )
 
 
-# Search languages
-@router.get("/search", response_model=LanguageSearchResponse)
+# Search languages - search by name
+# Administrator or Librarian role required
+@router.get(
+    "/search", 
+    response_model=LanguageSearchResponse,
+    summary="Create language, Admin or Librarian required"
+)
 async def search(
     query: str | None = Query(default=None),
     limit: int = Query(10, ge=1, le=50),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
     return await search_languages(
         session=session,
@@ -59,23 +76,40 @@ async def search(
     )
 
 
-# Update language
-@router.patch("/{language_id}", response_model=LanguageRead)
+# Update language - by id
+# Administrator role required
+@router.patch(
+    "/{language_id}", 
+    response_model=LanguageRead,
+    summary="Update language, Admin required"
+)
 async def update(
     language_id: int,
     data: LanguageUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await update_language(session, language_id, data)
+    return await update_language(
+        session=session, 
+        language_id=language_id, 
+        data_in=data
+    )
 
 
-# Delete language
-@router.delete("/{language_id}")
+# Delete language - by id
+# Administrator role required
+@router.delete(
+    "/{language_id}",
+    summary="Delete language, set force=True to delete entities, Admin required"
+)
 async def delete(
     language_id: int,
     force: bool = Query(False),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
-    return await delete_language(session, language_id, force)
+    return await delete_language(
+        session=session, 
+        language_id=language_id, 
+        force=force
+    )

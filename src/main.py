@@ -1,19 +1,22 @@
 # ==========================================
 #                   imports
 # ==========================================
+# Libraries:
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 import os
-from utils.init_db import init_db
-from api import main_router
 from fastapi.middleware.cors import CORSMiddleware
-# ==========================================
+# Utils:
+from utils.init_db import init_db
+# API:
+from api import main_router
 
 
 # ==========================================
 #                   main
 # ==========================================
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
@@ -22,6 +25,7 @@ async def lifespan(app: FastAPI):
 # FastAPI object
 app = FastAPI(lifespan=lifespan)
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins = [
@@ -32,7 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session middleware
+# JWT token middleware configuration
 load_dotenv()
 
 secret_key = os.getenv("SECRET_KEY")
@@ -41,4 +45,3 @@ if not secret_key:
 
 # Routers
 app.include_router(main_router)
-# ==========================================
