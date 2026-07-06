@@ -16,7 +16,12 @@ class BookPosition(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # id's of other tables
-    book_copy_id: int = Field(foreign_key="dim_book_copy.id", index=True)
+    book_copy_id: int = Field(
+        sa_column=Column(
+            ForeignKey("dim_book_copy.id", ondelete="CASCADE"),
+            index=True
+        )
+    )
     shelf_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_shelf.id", ondelete="CASCADE"),

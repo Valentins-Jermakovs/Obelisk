@@ -3,6 +3,7 @@
 # =====================================================
 from enum import Enum
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, ForeignKey
 # =====================================================
 
 
@@ -26,7 +27,12 @@ class BookImage(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     # Book
-    book_id: int = Field(foreign_key="dim_book.id", index=True)
+    book_id: int = Field(
+        sa_column=Column(
+            ForeignKey("dim_book.id", ondelete="CASCADE"),
+            index=True
+        )
+    )
 
     # Image path
     file_path: str
