@@ -14,7 +14,9 @@ from models import (
     BookImage,
     DimBookCopy,
     BookPosition,
-    DimShelf
+    DimShelf,
+    DimLibrarian,
+    LibrarianLibrary
 )
 # ===================================================
 
@@ -35,7 +37,69 @@ async def _check_isbn_unique(session: AsyncSession, isbn: str):
             status_code=409,
             detail="Book with this ISBN already exists"
         )
-    
+
+
+async def _get_librarian_from_payload(
+    session: AsyncSession,
+    payload: dict
+) -> DimLibrarian | None:
+    if "librarian" not in payload.get("roles", []):
+        return None
+
+    email = payload.get("email")
+
+    if not email:
+        raise HTTPException(401, "Invalid token payload")
+
+    librarian = (await session.exec(
+        select(DimLibrarian).where(DimLibrarian.email == email)
+    )).first()
+
+    if not librarian:
+        raise HTTPException(404, "Librarian not found")
+
+    return librarian
+
+
+async def _validate_librarian_access_to_book(
+    session: AsyncSession,
+    payload: dict,
+    book_id: int
+):
+    if "admin" in payload.get("roles", []):
+        return
+
+    librarian = await _get_librarian_from_payload(session, payload)
+
+    library_stmt = select(DimShelf.library_id).join(
+        BookPosition,
+        BookPosition.shelf_id == DimShelf.id
+    ).join(
+        DimBookCopy,
+        DimBookCopy.id == BookPosition.book_copy_id
+    ).where(
+        DimBookCopy.book_id == book_id
+    ).distinct()
+
+    library_ids = (await session.exec(library_stmt)).scalars().all()
+
+    if not library_ids:
+        return
+
+    assigned_ids = (await session.exec(
+        select(LibrarianLibrary.library_id).where(
+            LibrarianLibrary.librarian_id == librarian.id,
+            LibrarianLibrary.library_id.in_(library_ids)
+        )
+    )).scalars().all()
+
+    if set(assigned_ids) != set(library_ids):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not assigned to all libraries containing this book"
+        )
+
+
 async def _validate_existing_ids(
     session: AsyncSession,
     model,
@@ -119,9 +183,18 @@ async def _create_images(session: AsyncSession, book_id: int, images: list):
         ))
 
 
-async def _create_copies(session: AsyncSession, book_id: int, copies: list):
+async def _create_copies(
+    session: AsyncSession,
+    book_id: int,
+    copies: list,
+    payload: dict | None = None
+):
     if not copies:
         return
+
+    librarian = None
+    if payload and "admin" not in payload.get("roles", []):
+        librarian = await _get_librarian_from_payload(session, payload)
 
     for c in copies:
 
@@ -133,6 +206,20 @@ async def _create_copies(session: AsyncSession, book_id: int, copies: list):
                 status_code=404,
                 detail=f"Shelf {c.position.shelf_id} not found"
             )
+
+        if librarian:
+            access = (await session.exec(
+                select(LibrarianLibrary).where(
+                    LibrarianLibrary.librarian_id == librarian.id,
+                    LibrarianLibrary.library_id == shelf.library_id
+                )
+            )).first()
+
+            if not access:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"You are not assigned to library with shelf [id: {shelf.library_id}] [code: {shelf.code}]"
+                )
 
         # check inventory code uniqueness within the same library
         existing_copy = (await session.exec(

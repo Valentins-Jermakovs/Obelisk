@@ -42,9 +42,9 @@ router = APIRouter(
 async def create_book_route(
     book: BookCreate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
-    book_obj = await create_book(session, book)
+    book_obj = await create_book(session, book, payload)
     return await get_book(session, book_obj.id)
 
 
@@ -84,12 +84,13 @@ async def update_book_route(
     book_id: int,
     book: BookUpdate,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
     await update_book(
         session=session,
         book_id=book_id,
-        data=book
+        data=book,
+        payload=payload
     )
     return await get_book(session, book_id)
 

@@ -14,7 +14,8 @@ from .book_service_helpers import (
     _link_authors,
     _link_genres,
     _link_languages,
-    _create_images
+    _create_images,
+    _validate_librarian_access_to_book
 )
 # Models:
 from models import (
@@ -43,6 +44,7 @@ from schemas.book import BookCreate, BookUpdate
 async def create_book(
     session: AsyncSession,
     data: BookCreate,
+    payload: dict | None = None
 ):
     try:
         # 1. ISBN check
@@ -67,7 +69,7 @@ async def create_book(
 
         # 6. Copies + positions (optional but usually important)
         if hasattr(data, "copies"):
-            await _create_copies(session, book.id, data.copies)
+            await _create_copies(session, book.id, data.copies, payload)
 
         # 7. Commit everything
         await session.commit()
@@ -91,7 +93,8 @@ async def create_book(
 async def update_book(
     session: AsyncSession,
     book_id: int,
-    data: BookUpdate
+    data: BookUpdate,
+    payload: dict | None = None
 ):
     try:
         # 1. Load book
@@ -99,6 +102,9 @@ async def update_book(
 
         if not book:
             raise HTTPException(404, "Book not found")
+
+        if payload and "admin" not in payload.get("roles", []):
+            await _validate_librarian_access_to_book(session, payload, book_id)
 
         # 2. ISBN check (if changing)
         if data.isbn and data.isbn != book.isbn:
@@ -184,7 +190,7 @@ async def update_book(
                     )
                 )
 
-            await _create_copies(session, book_id, data.copies)
+            await _create_copies(session, book_id, data.copies, payload)
 
         # 7. Commit
         await session.commit()
