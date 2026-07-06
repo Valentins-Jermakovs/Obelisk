@@ -104,10 +104,11 @@ async def delete_book_route(
     book_id: int,
     force: bool = False,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
     return await delete_book(
         session=session,
         book_id=book_id,
-        force=force
+        force=force,
+        payload=payload
     )

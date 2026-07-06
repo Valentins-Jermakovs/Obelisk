@@ -6,6 +6,7 @@ from pathlib import Path
 sys.path.insert(0, 'src')
 
 import pytest
+from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 
@@ -17,7 +18,8 @@ from config.database import AsyncSessionLocal, engine
 from sqlmodel import SQLModel
 
 from models import (
-    DimAuthor, DimGenre, DimLanguage, DimLibrary, DimShelf
+    DimAuthor, DimGenre, DimLanguage, DimLibrary, DimShelf,
+    DimLibrarian, LibrarianLibrary
 )
 
 from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate
@@ -93,6 +95,117 @@ async def test_book_crud_flow():
         # delete (force)
         delr = await delete_book(session, book.id, force=True)
         assert delr.get('status') == 'deleted'
+
+
+@pytest.mark.asyncio
+async def test_librarian_can_delete_book_in_assigned_library():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        # create entities
+        author = DimAuthor(name='Assigned Author')
+        genre = DimGenre(name='Assigned Genre')
+        language = DimLanguage(code='fr', name='French')
+        library = DimLibrary(name='Assigned Library', city='CityX', address='AddrX')
+        librarian = DimLibrarian(full_name='Librarian One', email='lib1@example.com')
+
+        session.add_all([author, genre, language, library, librarian])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+        await session.refresh(librarian)
+
+        shelf = DimShelf(library_id=library.id, code='S-01')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        # assign librarian to the library
+        session.add(LibrarianLibrary(librarian_id=librarian.id, library_id=library.id))
+        await session.commit()
+
+        book = await create_book(
+            session,
+            BookCreate(
+                title='Assigned Book',
+                isbn='ISBN-ASSIGNED',
+                annotation='Assigned annotation',
+                publication_year=2023,
+                authors=[author.id],
+                genres=[genre.id],
+                languages=[language.id],
+                copies=[BookCopyCreate(inventory_code='INV-ASSIGN', condition='good', position=BookPositionCreate(shelf_id=shelf.id))]
+            ),
+            payload={"roles": ["librarian"], "email": librarian.email}
+        )
+
+        assert book.id is not None
+
+        result = await delete_book(
+            session,
+            book.id,
+            force=True,
+            payload={"roles": ["librarian"], "email": librarian.email}
+        )
+
+        assert result.get('status') == 'deleted'
+
+
+@pytest.mark.asyncio
+async def test_librarian_cannot_delete_book_in_unassigned_library():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Other Author')
+        genre = DimGenre(name='Other Genre')
+        language = DimLanguage(code='de', name='German')
+        library = DimLibrary(name='Other Library', city='CityY', address='AddrY')
+        other_library = DimLibrary(name='Unassigned Library', city='CityZ', address='AddrZ')
+        librarian = DimLibrarian(full_name='Librarian Two', email='lib2@example.com')
+
+        session.add_all([author, genre, language, library, other_library, librarian])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+        await session.refresh(other_library)
+        await session.refresh(librarian)
+
+        shelf = DimShelf(library_id=other_library.id, code='S-02')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        book = await create_book(
+            session,
+            BookCreate(
+                title='Unassigned Book',
+                isbn='ISBN-UNASSIGNED',
+                annotation='Unassigned annotation',
+                publication_year=2024,
+                authors=[author.id],
+                genres=[genre.id],
+                languages=[language.id],
+                copies=[BookCopyCreate(inventory_code='INV-UNASSIGN', condition='fair', position=BookPositionCreate(shelf_id=shelf.id))]
+            )
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_book(
+                session,
+                book.id,
+                force=True,
+                payload={"roles": ["librarian"], "email": librarian.email}
+            )
+
+        assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio

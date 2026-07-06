@@ -81,17 +81,19 @@ async def _validate_librarian_access_to_book(
         DimBookCopy.book_id == book_id
     ).distinct()
 
-    library_ids = (await session.exec(library_stmt)).scalars().all()
+    library_rows = (await session.exec(library_stmt)).all()
+    library_ids = [row[0] if isinstance(row, tuple) else row for row in library_rows]
 
     if not library_ids:
         return
 
-    assigned_ids = (await session.exec(
+    assigned_rows = (await session.exec(
         select(LibrarianLibrary.library_id).where(
             LibrarianLibrary.librarian_id == librarian.id,
             LibrarianLibrary.library_id.in_(library_ids)
         )
-    )).scalars().all()
+    )).all()
+    assigned_ids = [row[0] if isinstance(row, tuple) else row for row in assigned_rows]
 
     if set(assigned_ids) != set(library_ids):
         raise HTTPException(
@@ -183,6 +185,59 @@ async def _create_images(session: AsyncSession, book_id: int, images: list):
         ))
 
 
+async def _validate_copies(
+    session: AsyncSession,
+    copies: list,
+    payload: dict | None = None
+):
+    if not copies:
+        return
+
+    librarian = None
+    if payload and "admin" not in payload.get("roles", []):
+        librarian = await _get_librarian_from_payload(session, payload)
+
+    for c in copies:
+        shelf = await session.get(DimShelf, c.position.shelf_id)
+
+        if not shelf:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Shelf {c.position.shelf_id} not found"
+            )
+
+        if librarian:
+            access = (await session.exec(
+                select(LibrarianLibrary).where(
+                    LibrarianLibrary.librarian_id == librarian.id,
+                    LibrarianLibrary.library_id == shelf.library_id
+                )
+            )).first()
+
+            if not access:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"You are not assigned to library {shelf.library_id}"
+                )
+
+        existing_copy = (await session.exec(
+            select(DimBookCopy)
+            .join(BookPosition, BookPosition.book_copy_id == DimBookCopy.id)
+            .where(
+                DimBookCopy.inventory_code == c.inventory_code.strip(),
+                BookPosition.shelf_id.in_(
+                    select(DimShelf.id).where(DimShelf.library_id == shelf.library_id)
+                )
+            )
+        )).first()
+
+        if existing_copy:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Inventory code '{c.inventory_code}' already exists in library {shelf.library_id}"
+            )
+
+
 async def _create_copies(
     session: AsyncSession,
     book_id: int,
@@ -191,6 +246,8 @@ async def _create_copies(
 ):
     if not copies:
         return
+
+    await _validate_copies(session, copies, payload)
 
     librarian = None
     if payload and "admin" not in payload.get("roles", []):

@@ -15,6 +15,7 @@ from .book_service_helpers import (
     _link_genres,
     _link_languages,
     _create_images,
+    _validate_copies,
     _validate_librarian_access_to_book
 )
 # Models:
@@ -55,19 +56,23 @@ async def create_book(
         await _validate_existing_ids(session, DimGenre, data.genres, "Genre")
         await _validate_existing_ids(session, DimLanguage, data.languages, "Language")
 
-        # 3. Create base book
+        # 3. Validate copies early so the book is not created if copy validation fails
+        if hasattr(data, "copies"):
+            await _validate_copies(session, data.copies, payload)
+
+        # 4. Create base book
         book = await _create_book(session, data)
 
-        # 4. Relations
+        # 5. Relations
         await _link_authors(session, book.id, data.authors)
         await _link_genres(session, book.id, data.genres)
         await _link_languages(session, book.id, data.languages)
 
-        # 5. Images (optional)
+        # 6. Images (optional)
         if hasattr(data, "images"):
             await _create_images(session, book.id, data.images)
 
-        # 6. Copies + positions (optional but usually important)
+        # 7. Copies + positions (optional but usually important)
         if hasattr(data, "copies"):
             await _create_copies(session, book.id, data.copies, payload)
 
@@ -213,7 +218,8 @@ async def update_book(
 async def delete_book(
     session: AsyncSession,
     book_id: int,
-    force: bool = False
+    force: bool = False,
+    payload: dict | None = None
 ):
     try:
         # 1. Load book
@@ -221,6 +227,24 @@ async def delete_book(
 
         if not book:
             raise HTTPException(404, "Book not found")
+
+        if payload and "admin" not in payload.get("roles", []):
+            library_rows = (await session.exec(
+                select(DimShelf.library_id)
+                .join(BookPosition, BookPosition.shelf_id == DimShelf.id)
+                .join(DimBookCopy, DimBookCopy.id == BookPosition.book_copy_id)
+                .where(DimBookCopy.book_id == book_id)
+                .distinct()
+            )).all()
+            library_ids = [row[0] if isinstance(row, tuple) else row for row in library_rows]
+
+            if not library_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Book has no library assignment and cannot be deleted by a librarian"
+                )
+
+            await _validate_librarian_access_to_book(session, payload, book_id)
 
         # ======================================================
         # 2. CHECK ACTIVE LOANS (CRITICAL)
