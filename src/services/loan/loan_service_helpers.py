@@ -28,10 +28,12 @@ async def _get_librarian_from_payload(
     session: AsyncSession,
     payload: dict
 ) -> DimLibrarian | None:
-    
     # If token is invalid or does not contain librarian role
     if "librarian" not in payload.get("roles", []):
-        return None
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token payload or missing librarian role"
+        )
 
     email = payload.get("email")
 

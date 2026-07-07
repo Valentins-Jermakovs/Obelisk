@@ -4,7 +4,7 @@
 # Libraries:
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import select, or_, func
 # Helper functions
 from .loan_service_helpers import (
@@ -79,8 +79,36 @@ async def create_loan(
 
     await session.commit()
     await session.refresh(loan)
+    # Build response matching LoanRead schema
+    # Fetch related entities
+    book_copy = await session.get(DimBookCopy, loan.book_copy_id)
+    book = await session.get(DimBook, book_copy.book_id)
+    reader = await session.get(DimReader, loan.reader_id)
+    library = await session.get(DimLibrary, loan.library_id)
 
-    return loan
+    return {
+        "id": loan.id,
+        "status": loan.status,
+        "borrowed_at": loan.borrowed_at,
+        "return_date": loan.return_date,
+        "fine_amount": loan.fine_amount,
+        "reader": {
+            "id": reader.id,
+            "full_name": reader.full_name,
+            "email": reader.email,
+        },
+        "library": {
+            "id": library.id,
+            "name": library.name,
+            "city": library.city,
+        },
+        "book": {
+            "id": book.id,
+            "title": book.title,
+            "isbn": book.isbn,
+            "inventory_code": book_copy.inventory_code,
+        },
+    }
 
 
 # Update loan
@@ -171,6 +199,10 @@ async def update_loan(
 
         if new_date:
 
+            # Normalize timezone-aware incoming date to naive UTC for comparison
+            if new_date.tzinfo is not None:
+                new_date = new_date.astimezone(timezone.utc).replace(tzinfo=None)
+
             if new_date < loan.borrowed_at:
                 raise HTTPException(
                     status_code=400,
@@ -178,6 +210,7 @@ async def update_loan(
                 )
 
 
+        # Store naive datetime (DB uses naive datetimes)
         loan.return_date = new_date
 
 
@@ -229,8 +262,35 @@ async def update_loan(
     await session.commit()
     await session.refresh(loan)
 
+    # Build response matching LoanRead schema
+    book_copy = await session.get(DimBookCopy, loan.book_copy_id)
+    book = await session.get(DimBook, book_copy.book_id)
+    reader = await session.get(DimReader, loan.reader_id)
+    library = await session.get(DimLibrary, loan.library_id)
 
-    return loan
+    return {
+        "id": loan.id,
+        "status": loan.status,
+        "borrowed_at": loan.borrowed_at,
+        "return_date": loan.return_date,
+        "fine_amount": loan.fine_amount,
+        "reader": {
+            "id": reader.id,
+            "full_name": reader.full_name,
+            "email": reader.email,
+        },
+        "library": {
+            "id": library.id,
+            "name": library.name,
+            "city": library.city,
+        },
+        "book": {
+            "id": book.id,
+            "title": book.title,
+            "isbn": book.isbn,
+            "inventory_code": book_copy.inventory_code,
+        },
+    }
 
 
 # Delete loan

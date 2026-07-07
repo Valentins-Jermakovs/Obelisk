@@ -93,8 +93,7 @@ class LoanSearchRead(BaseModel):
 
 # Loan search schema - wrapper for loan read schema
 class LoanSearchResponse(BaseModel):
-
-    items: list[LoanRead]
+    items: list[LoanSearchRead]
     total: int
     limit: int
     offset: int

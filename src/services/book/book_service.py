@@ -33,6 +33,7 @@ from models import (
     FactLoan
 )
 from models import DimShelf, DimLibrary
+from models import LoanStatus
 # Schemas:
 from schemas.book import BookCreate, BookUpdate
 
@@ -262,7 +263,11 @@ async def delete_book(
         active_loans = (await session.exec(
             select(FactLoan).join(DimBookCopy).where(
                 DimBookCopy.book_id == book_id,
-                FactLoan.status == "active"
+                FactLoan.status.in_([
+                    LoanStatus.ACTIVE,
+                    LoanStatus.OVERDUE,
+                    LoanStatus.LOST
+                ])
             )
         )).first()
 
@@ -449,7 +454,11 @@ async def search_books(
                 active_loans = (await session.exec(
                     select(func.count(FactLoan.id)).where(
                         FactLoan.book_copy_id.in_(copy_ids),
-                        FactLoan.status == "active"
+                        FactLoan.status.in_([
+                            LoanStatus.ACTIVE,
+                            LoanStatus.OVERDUE,
+                            LoanStatus.LOST
+                        ])
                     )
                 )).one()
 
@@ -474,7 +483,11 @@ async def search_books(
                 active_loan_rows = (await session.exec(
                     select(FactLoan.book_copy_id).where(
                         FactLoan.book_copy_id.in_(copy_ids),
-                        FactLoan.status == "active"
+                        FactLoan.status.in_([
+                            LoanStatus.ACTIVE,
+                            LoanStatus.OVERDUE,
+                            LoanStatus.LOST
+                        ])
                     )
                 )).all()
 
@@ -641,7 +654,11 @@ async def get_book(
             active_loans = (await session.exec(
                 select(func.count(FactLoan.id)).where(
                     FactLoan.book_copy_id.in_(copy_ids),
-                    FactLoan.status == "active"
+                    FactLoan.status.in_([
+                        LoanStatus.ACTIVE,
+                        LoanStatus.OVERDUE,
+                        LoanStatus.LOST
+                    ])
                 )
             )).one()
 
@@ -668,11 +685,15 @@ async def get_book(
             active_loan_rows = (await session.exec(
                 select(FactLoan.book_copy_id).where(
                     FactLoan.book_copy_id.in_(copy_ids),
-                    FactLoan.status == "active"
+                    FactLoan.status.in_([
+                        LoanStatus.ACTIVE,
+                        LoanStatus.OVERDUE,
+                        LoanStatus.LOST
+                    ])
                 )
             )).all()
 
-            active_loan_copy_ids = set([r for r in active_loan_rows])
+            active_loan_copy_ids = set([r[0] if isinstance(r, tuple) else r for r in active_loan_rows])
 
             pos_rows = (await session.exec(
                 select(BookPosition, DimShelf, DimLibrary)
