@@ -3,7 +3,7 @@
 # ==================================================
 # Libraries:
 from typing import Union
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
@@ -71,8 +71,8 @@ async def create_author_route(
 )
 async def search_authors_route(
     q: str | None = None,
-    limit: int = 10,
-    offset: int = 0,
+    limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):

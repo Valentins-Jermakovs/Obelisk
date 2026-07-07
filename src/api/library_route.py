@@ -63,7 +63,7 @@ async def create_library_route(
 @router.get(
     "/search", 
     response_model=LibrarySearchResponse,
-    summary="Search library by name, city, address"
+    summary="Search library by name, city, address, roles not required"
 )
 async def search_libraries_route(
     q: str | None = None,
@@ -85,7 +85,7 @@ async def search_libraries_route(
 @router.get(
     "/{library_id}", 
     response_model=LibraryRead,
-    summary="Get library by ID"
+    summary="Get library by ID, roles not required"
 )
 async def get_library_route(
     library_id: int,

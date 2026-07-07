@@ -267,21 +267,56 @@ async def remove_librarian_from_library(
 
 
 # Delete a librarian with all its links
+# Delete librarian with all links
 async def delete_librarian(
-    session: AsyncSession, 
-    librarian_id: int
+    session: AsyncSession,
+    librarian_id: int,
+    force: bool = False,
 ):
-    # Get the librarian
-    librarian = await session.get(DimLibrarian, librarian_id)
+    # Check if librarian exists
+    librarian = await session.get(
+        DimLibrarian,
+        librarian_id
+    )
 
-    # If the librarian exists, remove it, else raise an exception
     if not librarian:
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Librarian not found"
         )
 
+
+    # Count linked libraries
+    libraries_count = await session.exec(
+        select(func.count())
+        .select_from(LibrarianLibrary)
+        .where(
+            LibrarianLibrary.librarian_id == librarian_id
+        )
+    )
+
+    libraries_count = libraries_count.one()
+
+
+    # If librarian has linked libraries
+    if libraries_count > 0 and not force:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Librarian is assigned to "
+                f"{libraries_count} libraries. "
+                "Use force=true to delete."
+            )
+        )
+
+
+    # Delete librarian
     await session.delete(librarian)
+
     await session.commit()
 
-    return {"status": "deleted"}
+
+    return {
+        "status": "deleted",
+        "removed_libraries_links": libraries_count
+    }

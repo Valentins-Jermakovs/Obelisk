@@ -141,10 +141,12 @@ async def unlink_library(
 )
 async def delete(
     librarian_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
     return await delete_librarian(
         session=session, 
-        librarian_id=librarian_id
+        librarian_id=librarian_id,
+        force=force
     )
