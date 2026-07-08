@@ -11,7 +11,8 @@ from schemas.genre import (
     GenreCreate, 
     GenreUpdate, 
     GenreRead, 
-    GenreSearchResponse
+    GenreSearchResponse,
+    GenreDeleteResponse
 )
 # Services
 from services.genre_service import (
@@ -102,6 +103,7 @@ async def update(
 # Administrator role required
 @router.delete(
     "/{genre_id}",
+    response_model=GenreDeleteResponse,
     summary="Delete genre, set force=True to delete entities, Admin required"
 )
 async def delete(

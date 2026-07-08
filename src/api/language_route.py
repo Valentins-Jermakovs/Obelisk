@@ -18,7 +18,8 @@ from schemas.language import (
     LanguageCreate, 
     LanguageUpdate, 
     LanguageRead, 
-    LanguageSearchResponse
+    LanguageSearchResponse,
+    LanguageDeleteResponse
 )
 # Utils:
 from utils.token_utils import admin_required, admin_or_librarian_required
@@ -100,6 +101,7 @@ async def update(
 # Administrator role required
 @router.delete(
     "/{language_id}",
+    response_model=LanguageDeleteResponse,
     summary="Delete language, set force=True to delete entities, Admin required"
 )
 async def delete(

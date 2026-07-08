@@ -11,7 +11,8 @@ from schemas.reader import (
     ReaderCreate,
     ReaderUpdate,
     ReaderRead,
-    ReaderSearchResponse
+    ReaderSearchResponse,
+    ReaderDeleteResponse
 )
 # Services:
 from services.reader_service import (
@@ -105,6 +106,7 @@ async def update(
 # Administrator role required
 @router.delete(
     "/{reader_id}",
+    response_model=ReaderDeleteResponse,
     summary="Delete reader by ID, set force=True to delete entities, Admin required"
 )
 async def delete(

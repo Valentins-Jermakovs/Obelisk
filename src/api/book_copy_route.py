@@ -24,8 +24,13 @@ from services.book_copy.book_copy_service import (
 )
 # Utils:
 from utils.token_utils import (
-    validate_token, 
     librarian_required
+)
+# Schemas:
+from schemas.book_copy import (
+    BookCopyRead,
+    BookCopyDeleteResponse,
+    BookCopySearchResponse
 )
 
 
@@ -44,7 +49,11 @@ router = APIRouter(
 # Create physical book copy
 # Return copy data
 # Librarian role required
-@router.post("/", summary="Create book copy, Librarian required")
+@router.post(
+    "/",
+    response_model=BookCopyRead,
+    summary="Create book copy, Librarian required"
+)
 async def create_copy(
     data: BookCopyCreate,
     session: AsyncSession = Depends(get_db),
@@ -62,7 +71,11 @@ async def create_copy(
 # Update book copy - update an existing physical copy by id
 # Return updated copy data
 # Librarian role required
-@router.patch("/{copy_id}", summary="Update book copy, Librarian required")
+@router.patch(
+    "/{copy_id}",
+    response_model=BookCopyRead,
+    summary="Update book copy, Librarian required"
+)
 async def update_copy(
     copy_id: int,
     data: BookCopyUpdate,
@@ -82,7 +95,11 @@ async def update_copy(
 # Delete book copy - delete an existing copy by id
 # Return message or warning 
 # Librarian role required
-@router.delete("/{copy_id}", summary="Delete bookk copy, Librarian required")
+@router.delete(
+    "/{copy_id}",
+    response_model=BookCopyDeleteResponse,
+    summary="Delete bookk copy, Librarian required"
+)
 async def delete_copy(
     copy_id: int,
     session: AsyncSession = Depends(get_db),
@@ -99,7 +116,11 @@ async def delete_copy(
 
 # Search book copy
 # Librarian role required
-@router.get("/search", summary="Search book copy, Librarian required")
+@router.get(
+    "/search",
+    response_model=BookCopySearchResponse,
+    summary="Search book copy, Librarian required"
+)
 async def search_copy(
     query: str | None = Query(
         default=None,

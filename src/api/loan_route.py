@@ -20,7 +20,8 @@ from schemas.loan import (
     LoanUpdate,
     LoanRead,
     LoanSearchResponse,
-    ReaderLoanSearchResponse
+    ReaderLoanSearchResponse,
+    LoanDeleteResponse
 )
 # Utils:
 from utils.token_utils import librarian_required, validate_token
@@ -83,6 +84,7 @@ async def update(
 # Librarian role required
 @router.delete(
     "/{loan_id}",
+    response_model=LoanDeleteResponse,
     summary="Delete a loan by ID, Librarian required",
 )
 async def delete(

@@ -19,7 +19,11 @@ from services.librarian_service import (
 from schemas.librarian import (
     LibrarianCreate,
     LibrarianUpdate,
-    LibrarianSearchResponse
+    LibrarianSearchResponse,
+    LibrarianRead,
+    LibrarianLibraryLinkResponse,
+    LibrarianLibraryUnlinkResponse,
+    LibrarianDeleteResponse
 )
 # Utils:
 from utils.token_utils import admin_required, validate_token
@@ -41,7 +45,8 @@ router = APIRouter(
 # Return a librarian object
 # Everyone can be accessed to this route - Mostly automatically
 @router.post(
-    "/", 
+    "/",
+    response_model=LibrarianRead,
     summary="Create librarian, no role required"
 )
 async def create(
@@ -58,7 +63,8 @@ async def create(
 # Update librarian
 # Everyone can be accessed to this route - Mostly automatically
 @router.patch(
-    "/{librarian_id}", 
+    "/{librarian_id}",
+    response_model=LibrarianRead,
     summary="Update librarian, no role required"
 )
 async def update(
@@ -77,6 +83,7 @@ async def update(
 # Administrator role required
 @router.post(
     "/{librarian_id}/libraries/{library_id}",
+    response_model=LibrarianLibraryLinkResponse,
     summary="Update librarian, Admin role required"
 )
 async def link_library(
@@ -118,6 +125,7 @@ async def search(
 # Administrator role required
 @router.delete(
     "/{librarian_id}/libraries/{library_id}",
+    response_model=LibrarianLibraryUnlinkResponse,
     summary="Delete link between library and librarian, Admin role required"
 )
 async def unlink_library(
@@ -137,6 +145,7 @@ async def unlink_library(
 # Administrator role required
 @router.delete(
     "/{librarian_id}",
+    response_model=LibrarianDeleteResponse,
     summary="Delete librarian by ID, set force=True to delete entities, Admin required"
 )
 async def delete(

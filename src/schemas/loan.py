@@ -55,14 +55,10 @@ class LoanLibrary(BaseModel):
 class LoanRead(BaseModel):
 
     id: int
-
     status: LoanStatus
-
     borrowed_at: datetime
     return_date: Optional[datetime]
-
     fine_amount: float
-
     reader: LoanReader
     library: LoanLibrary
     book: LoanBook
@@ -77,17 +73,12 @@ class LoanSearchRead(BaseModel):
 
     book_copy_id: int
     book_title: str
-
     reader_id: int
     reader_name: str
-
     library_id: int
-
     status: LoanStatus
-
     borrowed_at: datetime
     return_date: datetime | None
-
     fine_amount: float
 
 
@@ -114,18 +105,13 @@ class LoanDeleteWarning(BaseModel):
 # Reader loan read schema
 class ReaderLoanRead(BaseModel):
     id: int
-
     book_title: str
     book_copy_id: int
-
     library_id: int
     library_name: str
-
     status: LoanStatus
-
     borrowed_at: datetime
     return_date: Optional[datetime]
-
     fine_amount: float
 
 
@@ -138,3 +124,9 @@ class ReaderLoanSearchResponse(BaseModel):
     limit: int
     offset: int
     returned: int
+
+# Loan delete response schema
+class LoanDeleteResponse(BaseModel):
+
+    status: str
+    loan_id: int

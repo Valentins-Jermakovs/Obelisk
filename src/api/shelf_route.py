@@ -13,7 +13,8 @@ from schemas.shelf import (
     ShelfCreate, 
     ShelfUpdate, 
     ShelfRead, 
-    ShelfSearchResponse
+    ShelfSearchResponse,
+    ShelfDeleteResponse
 )
 # Services:
 from services.shelf_service import (
@@ -106,6 +107,7 @@ async def update(
 # Librarian role required
 @router.delete(
     "/{shelf_id}",
+    response_model=ShelfDeleteResponse,
     summary="Delete shelf by ID, set force=True to delete entities, Admin required"
 )
 async def delete(
