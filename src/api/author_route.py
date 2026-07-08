@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
-# Schemas
+# Schemas:
 from schemas.author import (
     AuthorCreate,
     AuthorUpdate,
