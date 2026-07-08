@@ -183,34 +183,42 @@ async def update_book_copy(
 
     # Inventory code
     if "inventory_code" in update_data:
+        inventory_code_value = update_data["inventory_code"]
 
-        inventory_code = update_data["inventory_code"].strip().upper()
+        if inventory_code_value is not None:
+            inventory_code = inventory_code_value.strip().upper()
 
-        existing = (
-            await session.exec(
-                select(DimBookCopy).where(
-                    DimBookCopy.inventory_code == inventory_code,
-                    DimBookCopy.id != copy_id
+            if not inventory_code:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Inventory code cannot be empty"
                 )
-            )
-        ).first()
 
-        if existing:
-            raise HTTPException(
-                status_code=409,
-                detail="Inventory code already exists"
-            )
+            existing = (
+                await session.exec(
+                    select(DimBookCopy).where(
+                        DimBookCopy.inventory_code == inventory_code,
+                        DimBookCopy.id != copy_id
+                    )
+                )
+            ).first()
 
-        copy.inventory_code = inventory_code
+            if existing:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Inventory code already exists"
+                )
+
+            copy.inventory_code = inventory_code
 
 
     # Condition
-    if "condition" in update_data:
+    if "condition" in update_data and update_data["condition"] is not None:
         copy.condition = update_data["condition"]
 
 
     # Shelf
-    if "shelf_id" in update_data:
+    if "shelf_id" in update_data and update_data["shelf_id"] is not None:
 
         shelf = await session.get(
             DimShelf,
@@ -233,13 +241,13 @@ async def update_book_copy(
 
 
     # Coordinates
-    if "row" in update_data:
+    if "row" in update_data and update_data["row"] is not None:
         position.row = update_data["row"]
 
-    if "column" in update_data:
+    if "column" in update_data and update_data["column"] is not None:
         position.column = update_data["column"]
 
-    if "depth" in update_data:
+    if "depth" in update_data and update_data["depth"] is not None:
         position.depth = update_data["depth"]
 
 
