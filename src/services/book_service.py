@@ -175,6 +175,7 @@ async def update_book(
 
         # 6. COPIES (danger zone — full replace)
         if data.copies is not None:
+            await _validate_copies(session, data.copies, payload)
 
             # delete positions first
             copies = (await session.exec(

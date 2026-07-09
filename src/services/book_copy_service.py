@@ -10,7 +10,8 @@ from utils.service_utils import (
     _validate_librarian_access_to_library,
     _get_copy_library_id,
     _get_last_loan,
-    _get_accessible_library_ids
+    _get_accessible_library_ids,
+    _check_position_is_available
 )
 # Schemas:
 from schemas.book_copy import BookCopyCreate, BookCopyUpdate
@@ -94,6 +95,14 @@ async def create_book_copy(
         )
 
 
+    await _check_position_is_available(
+        session,
+        data.shelf_id,
+        data.row,
+        data.column,
+        data.depth
+    )
+
     # Create copy
     copy = DimBookCopy(
         book_id=data.book_id,
@@ -176,6 +185,20 @@ async def update_book_copy(
         exclude_unset=True
     )
 
+    target_shelf_id = update_data.get("shelf_id", position.shelf_id)
+    target_row = update_data.get("row", position.row)
+    target_column = update_data.get("column", position.column)
+    target_depth = update_data.get("depth", position.depth)
+
+    if any(field in update_data for field in ("shelf_id", "row", "column", "depth")):
+        await _check_position_is_available(
+            session,
+            target_shelf_id,
+            target_row,
+            target_column,
+            target_depth,
+            exclude_copy_id=copy_id
+        )
 
     # Check for new inventory code
     if "inventory_code" in update_data:

@@ -252,6 +252,41 @@ async def _create_images(
         ))
 
 
+async def _check_position_is_available(
+    session: AsyncSession,
+    shelf_id: int,
+    row: int | None = None,
+    column: int | None = None,
+    depth: int | None = None,
+    exclude_copy_id: int | None = None
+):
+    if shelf_id is None:
+        return
+
+    if row is None and column is None and depth is None:
+        return
+
+    stmt = select(BookPosition).where(BookPosition.shelf_id == shelf_id)
+
+    if row is not None:
+        stmt = stmt.where(BookPosition.row == row)
+    if column is not None:
+        stmt = stmt.where(BookPosition.column == column)
+    if depth is not None:
+        stmt = stmt.where(BookPosition.depth == depth)
+
+    if exclude_copy_id is not None:
+        stmt = stmt.where(BookPosition.book_copy_id != exclude_copy_id)
+
+    existing_position = (await session.exec(stmt)).first()
+
+    if existing_position:
+        raise HTTPException(
+            status_code=409,
+            detail="Position already exists"
+        )
+
+
 # This function validate the copies of a book
 async def _validate_copies(
     session: AsyncSession,
@@ -293,6 +328,15 @@ async def _validate_copies(
                     status_code=403,
                     detail=f"You are not assigned to library {shelf.library_id}"
                 )
+
+        # Check that the target position is not already occupied
+        await _check_position_is_available(
+            session,
+            c.position.shelf_id,
+            c.position.row,
+            c.position.column,
+            c.position.depth
+        )
 
         # Try to find an existing copy with the same inventory code and position
         existing_copy = (await session.exec(

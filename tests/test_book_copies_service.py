@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel, create_engine
@@ -31,6 +32,74 @@ def async_session_local():
     async_engine = create_async_engine(ASYNC_URL, echo=False)
     session_local = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
     return session_local
+
+
+@pytest.mark.asyncio
+async def test_update_book_copy_fails_when_new_position_is_occupied(async_session_local):
+    async with async_session_local() as session:
+        library = DimLibrary(name="Lib", city="City", address="Addr")
+        session.add(library)
+        await session.commit()
+        await session.refresh(library)
+
+        shelf = DimShelf(library_id=library.id, code="S-1")
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        book = DimBook(title="Sample", isbn="ISBN-2", publication_year=2020)
+        session.add(book)
+        await session.commit()
+        await session.refresh(book)
+
+        librarian = DimLibrarian(full_name="Librarian", email="lib@example.com")
+        session.add(librarian)
+        await session.commit()
+        await session.refresh(librarian)
+
+        session.add(LibrarianLibrary(librarian_id=librarian.id, library_id=library.id))
+        await session.commit()
+
+        payload = {"roles": ["librarian"], "email": "lib@example.com"}
+
+        first_copy = await create_book_copy(
+            session=session,
+            data=BookCopyCreate(
+                book_id=book.id,
+                library_id=library.id,
+                shelf_id=shelf.id,
+                inventory_code="INV-1",
+                row=1,
+                column=2,
+                depth=3,
+            ),
+            payload=payload,
+        )
+
+        second_copy = await create_book_copy(
+            session=session,
+            data=BookCopyCreate(
+                book_id=book.id,
+                library_id=library.id,
+                shelf_id=shelf.id,
+                inventory_code="INV-2",
+                row=4,
+                column=5,
+                depth=6,
+            ),
+            payload=payload,
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_book_copy(
+                session=session,
+                copy_id=second_copy.id,
+                data=BookCopyUpdate(shelf_id=shelf.id, row=1, column=2, depth=3),
+                payload=payload,
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == 'Позиция уже занята'
 
 
 @pytest.mark.asyncio

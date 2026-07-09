@@ -19,7 +19,7 @@ from sqlmodel import SQLModel
 
 from models import (
     DimAuthor, DimGenre, DimLanguage, DimLibrary, DimShelf,
-    DimLibrarian, LibrarianLibrary
+    DimLibrarian, LibrarianLibrary, DimBook, DimBookCopy, BookPosition
 )
 
 from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate
@@ -95,6 +95,64 @@ async def test_book_crud_flow():
         # delete (force)
         delr = await delete_book(session, book.id, force=True)
         assert delr.get('status') == 'deleted'
+
+
+@pytest.mark.asyncio
+async def test_create_book_fails_when_copy_position_is_already_occupied():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Position Author')
+        genre = DimGenre(name='Position Genre')
+        language = DimLanguage(code='pt', name='Portuguese')
+        library = DimLibrary(name='Position Library', city='CityP', address='AddrP')
+
+        session.add_all([author, genre, language, library])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+
+        shelf = DimShelf(library_id=library.id, code='POS-1')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        existing_book = DimBook(title='Existing', isbn='ISBN-EXIST', publication_year=2020)
+        session.add(existing_book)
+        await session.commit()
+        await session.refresh(existing_book)
+
+        existing_copy = DimBookCopy(book_id=existing_book.id, inventory_code='INV-EXIST', condition='good')
+        session.add(existing_copy)
+        await session.flush()
+        session.add(BookPosition(book_copy_id=existing_copy.id, shelf_id=shelf.id, row=1, column=2, depth=3))
+        await session.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_book(
+                session,
+                BookCreate(
+                    title='New Book',
+                    isbn='ISBN-NEW-POS',
+                    annotation='Test',
+                    publication_year=2021,
+                    authors=[author.id],
+                    genres=[genre.id],
+                    languages=[language.id],
+                    copies=[BookCopyCreate(
+                        inventory_code='INV-NEW',
+                        condition='good',
+                        position=BookPositionCreate(shelf_id=shelf.id, row=1, column=2, depth=3)
+                    )]
+                )
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == 'Позиция уже занята'
 
 
 @pytest.mark.asyncio
