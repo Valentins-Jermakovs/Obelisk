@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
 # Services
-from services.loan.loan_service import (
+from services.loan_service import (
     create_loan,
     update_loan,
     delete_loan,

@@ -13,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
 import models  # noqa: F401
 from models import DimBook, DimBookCopy, DimLibrarian, DimLibrary, DimShelf, LibrarianLibrary
 from schemas.book_copy import BookCopyCreate, BookCopyUpdate
-from services.book_copy.book_copy_service import create_book_copy, update_book_copy
+from services.book_copy_service import create_book_copy, update_book_copy
 
 DB_PATH = "/tmp/obelisk_book_copy_pytest.db"
 SYNC_URL = f"sqlite:///{DB_PATH}"

@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from datetime import datetime, timezone
 from sqlmodel import select, or_, func
 # Helper functions
-from .loan_service_helpers import (
+from utils.service_utils import (
     _validate_librarian_access_to_library,
     _validate_reader,
     _validate_book_copy,

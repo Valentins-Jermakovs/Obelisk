@@ -17,7 +17,7 @@ from schemas.book import (
     BookDeleteWarning
 )
 # Services:
-from services.book.book_service import (
+from services.book_service import (
     create_book,
     search_books,
     update_book,

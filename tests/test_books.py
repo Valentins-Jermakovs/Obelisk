@@ -23,7 +23,7 @@ from models import (
 )
 
 from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate
-from services.book.book_service import (
+from services.book_service import (
     create_book, search_books, get_book, update_book, delete_book
 )
 

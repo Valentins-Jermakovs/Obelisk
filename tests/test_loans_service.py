@@ -23,7 +23,7 @@ from models import (
 )
 from schemas.loan import LoanCreate, LoanUpdate
 from models import LoanStatus
-from services.loan.loan_service import create_loan, update_loan, delete_loan
+from services.loan_service import create_loan, update_loan, delete_loan
 
 DB_PATH = "/tmp/obelisk_test_pytest.db"
 SYNC_URL = f"sqlite:///{DB_PATH}"

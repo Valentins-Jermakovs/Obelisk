@@ -16,7 +16,7 @@ from schemas.book_copy import (
     BookCopyUpdate
 )
 # Services:
-from services.book_copy.book_copy_service import (
+from services.book_copy_service import (
     create_book_copy,
     update_book_copy,
     delete_book_copy,

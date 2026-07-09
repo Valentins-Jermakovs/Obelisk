@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, or_, func
 # Helper functions:
-from .book_service_helpers import (
+from utils.service_utils import (
     _check_isbn_unique,
     _validate_existing_ids,
     _create_book,

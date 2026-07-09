@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Helpers:
-from .book_copy_service_helpers import (
+from utils.service_utils import (
     _validate_librarian_access_to_library,
     _get_copy_library_id,
     _get_last_loan,
