@@ -156,6 +156,60 @@ async def test_create_book_fails_when_copy_position_is_already_occupied():
 
 
 @pytest.mark.asyncio
+async def test_create_book_fails_when_multiple_copies_share_the_same_position():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Shared Position Author')
+        genre = DimGenre(name='Shared Position Genre')
+        language = DimLanguage(code='es', name='Spanish')
+        library = DimLibrary(name='Shared Position Library', city='CityS', address='AddrS')
+
+        session.add_all([author, genre, language, library])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+
+        shelf = DimShelf(library_id=library.id, code='SP-1')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await create_book(
+                session,
+                BookCreate(
+                    title='Shared Position Book',
+                    isbn='ISBN-SHARED-POS',
+                    annotation='Test',
+                    publication_year=2021,
+                    authors=[author.id],
+                    genres=[genre.id],
+                    languages=[language.id],
+                    copies=[
+                        BookCopyCreate(
+                            inventory_code='INV-A',
+                            condition='good',
+                            position=BookPositionCreate(shelf_id=shelf.id, row=1, column=2, depth=3)
+                        ),
+                        BookCopyCreate(
+                            inventory_code='INV-B',
+                            condition='good',
+                            position=BookPositionCreate(shelf_id=shelf.id, row=1, column=2, depth=3)
+                        )
+                    ]
+                )
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == 'Позиция уже занята'
+
+
+@pytest.mark.asyncio
 async def test_librarian_can_delete_book_in_assigned_library():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)

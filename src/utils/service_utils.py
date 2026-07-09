@@ -252,20 +252,35 @@ async def _create_images(
         ))
 
 
+# This function is used to check if a position is available
 async def _check_position_is_available(
     session: AsyncSession,
     shelf_id: int,
     row: int | None = None,
     column: int | None = None,
     depth: int | None = None,
-    exclude_copy_id: int | None = None
+    exclude_copy_id: int | None = None,
+    occupied_positions: set | None = None
 ):
+    
     if shelf_id is None:
         return
 
     if row is None and column is None and depth is None:
         return
 
+    # Get the position key
+    position_key = (shelf_id, row, column, depth)
+    if occupied_positions is not None:
+        # Check if the position is already occupied
+        if position_key in occupied_positions:
+            raise HTTPException(
+                status_code=409,
+                detail="Position already used"
+            )
+        occupied_positions.add(position_key)
+
+    # Get the position
     stmt = select(BookPosition).where(BookPosition.shelf_id == shelf_id)
 
     if row is not None:
@@ -275,15 +290,17 @@ async def _check_position_is_available(
     if depth is not None:
         stmt = stmt.where(BookPosition.depth == depth)
 
+    # Exclude the copy_id if it is provided
     if exclude_copy_id is not None:
         stmt = stmt.where(BookPosition.book_copy_id != exclude_copy_id)
 
     existing_position = (await session.exec(stmt)).first()
 
+    # If there is an existing position, raise an error
     if existing_position:
         raise HTTPException(
             status_code=409,
-            detail="Position already exists"
+            detail="Position already used"
         )
 
 
@@ -301,6 +318,8 @@ async def _validate_copies(
     librarian = None
     if payload and "admin" not in payload.get("roles", []):
         librarian = await _get_librarian_from_payload(session, payload)
+
+    occupied_positions: set[tuple[int, int | None, int | None, int | None]] = set()
 
     # Validate the copies of the book
     for c in copies:
@@ -335,7 +354,8 @@ async def _validate_copies(
             c.position.shelf_id,
             c.position.row,
             c.position.column,
-            c.position.depth
+            c.position.depth,
+            occupied_positions=occupied_positions
         )
 
         # Try to find an existing copy with the same inventory code and position
