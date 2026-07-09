@@ -128,7 +128,6 @@ async def update_book(
 
 
         # 4. RELATIONS (replace strategy)
-
         # AUTHORS
         if data.authors is not None:
             await session.exec(
@@ -167,7 +166,6 @@ async def update_book(
 
 
         # 5. IMAGES (full replace)
-
         if data.images is not None:
             await session.exec(
                 BookImage.__table__.delete().where(BookImage.book_id == book_id)
@@ -176,7 +174,6 @@ async def update_book(
 
 
         # 6. COPIES (danger zone — full replace)
-
         if data.copies is not None:
 
             # delete positions first
@@ -259,7 +256,6 @@ async def delete_book(
 
 
         # 2. CHECK ACTIVE LOANS (CRITICAL)
-
         active_loans = (await session.exec(
             select(FactLoan).join(DimBookCopy).where(
                 DimBookCopy.book_id == book_id,
@@ -281,7 +277,6 @@ async def delete_book(
 
 
         # 3. CHECK OTHER LINKS (optional warning mode)
-
         copies = (await session.exec(
             select(DimBookCopy).where(DimBookCopy.book_id == book_id)
         )).all()
@@ -295,7 +290,6 @@ async def delete_book(
 
 
         # 4. FORCE DELETE CASCADE (manual control)
-
         if copies:
             copy_ids = [c.id for c in copies]
 
@@ -306,21 +300,21 @@ async def delete_book(
                 )
             )
 
-            # loans (historical cleanup if needed)
+            # Loans (historical cleanup if needed)
             await session.exec(
                 FactLoan.__table__.delete().where(
                     FactLoan.book_copy_id.in_(copy_ids)
                 )
             )
 
-            # copies
+            # Copies
             await session.exec(
                 DimBookCopy.__table__.delete().where(
                     DimBookCopy.id.in_(copy_ids)
                 )
             )
 
-        # relations
+        # Relations
         await session.exec(
             BookAuthor.__table__.delete().where(
                 BookAuthor.book_id == book_id
@@ -347,7 +341,6 @@ async def delete_book(
 
 
         # 5. DELETE BOOK ITSELF
-
         await session.delete(book)
 
         await session.commit()
@@ -381,7 +374,6 @@ async def search_books(
     try:
 
         # BASE QUERY
-
         stmt = select(DimBook)
 
         if query:
@@ -396,21 +388,21 @@ async def search_books(
                         DimBook.isbn.ilike(f"%{q}%"),
                         DimBook.annotation.ilike(f"%{q}%"),
 
-                        # author join
+                        # Author join
                         DimBook.id.in_(
                             select(BookAuthor.book_id).join(DimAuthor).where(
                                 DimAuthor.name.ilike(f"%{q}%")
                             )
                         ),
 
-                        # genre join
+                        # Genre join
                         DimBook.id.in_(
                             select(BookGenre.book_id).join(DimGenre).where(
                                 DimGenre.name.ilike(f"%{q}%")
                             )
                         ),
 
-                        # language join
+                        # Language join
                         DimBook.id.in_(
                             select(BookLanguage.book_id).join(DimLanguage).where(
                                 or_(
@@ -424,31 +416,27 @@ async def search_books(
 
 
         # TOTAL COUNT
-
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = (await session.exec(count_stmt)).one()
 
 
         # PAGINATION
-
         stmt = stmt.offset(offset).limit(limit)
         books = (await session.exec(stmt)).all()
 
 
         # ENRICH RESULTS
-
         results = []
 
         for book in books:
-
-            # copies
+            # Copies
             copies = (await session.exec(
                 select(DimBookCopy).where(DimBookCopy.book_id == book.id)
             )).all()
 
             copy_ids = [c.id for c in copies]
 
-            # active loans
+            # Active loans
             active_loans = 0
             if copy_ids:
                 active_loans = (await session.exec(
@@ -465,7 +453,7 @@ async def search_books(
             total_copies = len(copy_ids)
             available = total_copies - active_loans
 
-            # availability status
+            # Availability status
             if total_copies == 0:
                 status = "no_copies"
             elif available <= 0:
@@ -475,11 +463,11 @@ async def search_books(
             else:
                 status = "available"
 
-            # --- libraries breakdown ---
+            # Libraries breakdown
             libraries_list = []
 
             if copy_ids:
-                # which copy ids are currently loaned
+                # Which copy ids are currently loaned
                 active_loan_rows = (await session.exec(
                     select(FactLoan.book_copy_id).where(
                         FactLoan.book_copy_id.in_(copy_ids),
@@ -493,7 +481,7 @@ async def search_books(
 
                 active_loan_copy_ids = set(active_loan_rows)
 
-                # positions with shelf + library
+                # Positions with shelf + library
                 pos_rows = (await session.exec(
                     select(BookPosition, DimShelf, DimLibrary)
                     .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
@@ -501,7 +489,7 @@ async def search_books(
                     .where(BookPosition.book_copy_id.in_(copy_ids))
                 )).all()
 
-                # aggregate per library
+                # Aggregate per library
                 lib_map: dict[int, dict] = {}
                 for pos, shelf, lib in pos_rows:
                     copy_id = pos.book_copy_id
@@ -518,7 +506,7 @@ async def search_books(
                     if copy_id in active_loan_copy_ids:
                         entry["active_loans"] += 1
 
-                # aggregate per library
+                # Aggregate per library
                 for lid, v in lib_map.items():
                     av = v["total_copies"] - v["active_loans"]
                     libraries_list.append({
@@ -531,7 +519,7 @@ async def search_books(
                         "active_loans": v["active_loans"]
                     })
 
-            # aggregate per book
+            # Aggregate per book
             results.append({
                 "id": book.id,
                 "title": book.title,
@@ -573,7 +561,6 @@ async def get_book(
     try:
 
         # 1. BASE BOOK
-
         book = await session.get(DimBook, book_id)
 
         if not book:
@@ -581,7 +568,6 @@ async def get_book(
 
 
         # 2. AUTHORS
-
         author_rows = (await session.exec(
             select(DimAuthor)
             .join(BookAuthor)
@@ -590,7 +576,6 @@ async def get_book(
 
 
         # 3. GENRES
-
         genre_rows = (await session.exec(
             select(DimGenre)
             .join(BookGenre)
@@ -599,7 +584,6 @@ async def get_book(
 
 
         # 4. LANGUAGES
-
         language_rows = (await session.exec(
             select(DimLanguage)
             .join(BookLanguage)
@@ -608,21 +592,19 @@ async def get_book(
 
 
         # 5. IMAGES
-
         images = (await session.exec(
             select(BookImage).where(BookImage.book_id == book_id)
         )).all()
 
 
         # 6. COPIES
-
         copies = (await session.exec(
             select(DimBookCopy).where(DimBookCopy.book_id == book_id)
         )).all()
 
         copy_ids = [c.id for c in copies]
 
-        # copy positions and shelves
+        # Copy positions and shelves
         copy_positions = {}
         if copy_ids:
             pos_rows = (await session.exec(
@@ -647,7 +629,6 @@ async def get_book(
 
 
         # 7. LOANS + AVAILABILITY
-
         active_loans = 0
 
         if copy_ids:
@@ -676,9 +657,7 @@ async def get_book(
 
 
         # 8. RESPONSE
-
-
-        # libraries breakdown
+        # Libraries breakdown
         libraries_list = []
 
         if copy_ids:
@@ -703,7 +682,7 @@ async def get_book(
             )).all()
 
             lib_map: dict[int, dict] = {}
-            # create library map
+            # Create library map
             for pos, shelf, lib in pos_rows:
                 copy_id = pos.book_copy_id
                 entry = lib_map.setdefault(lib.id, {

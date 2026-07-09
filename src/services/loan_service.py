@@ -45,40 +45,50 @@ async def create_loan(
     data: LoanCreate,
     payload: dict
 ):
+    
+    # Validate access to library
     await _validate_librarian_access_to_library(
         session,
         payload,
         data.library_id
     )
 
+    # Validate reader
     await _validate_reader(
         session,
         data.reader_id
     )
 
+    # Validate book copy
     await _validate_book_copy(
         session,
         data.book_copy_id
     )
 
+    # Validate library
     await _validate_copy_library(
         session,
         data.book_copy_id,
         data.library_id
     )
 
+    # Check if copy is available
     await _check_copy_available(
         session,
         data.book_copy_id
     )
 
+    # Create loan
     loan = await _create_loan(
         session,
         data
     )
 
+    # Commit changes to database
     await session.commit()
     await session.refresh(loan)
+
+
     # Build response matching LoanRead schema
     # Fetch related entities
     book_copy = await session.get(DimBookCopy, loan.book_copy_id)
@@ -136,12 +146,9 @@ async def update_loan(
 
 
     # Update status
-
-
     if "status" in update_data:
 
         new_status = update_data["status"]
-
 
         # Returned loan is final
         if (
@@ -164,38 +171,34 @@ async def update_loan(
                 detail="Lost loan cannot become active"
             )
 
-
+        # Update fields
         loan.status = new_status
 
 
         # Auto dates
+        # Set to return date for returned loans
         if new_status == LoanStatus.RETURNED:
 
             if loan.return_date is None:
                 loan.return_date = datetime.now()
 
-
+        # Lost loan should have return date
         elif new_status == LoanStatus.LOST:
 
             if loan.return_date is None:
                 loan.return_date = datetime.now()
 
-
+        # Active loan should not have return date
         elif new_status == LoanStatus.ACTIVE:
 
             # Active loan should not have return date
             loan.return_date = None
 
 
-
-
     # Update return date
-
-
     if "return_date" in update_data:
 
         new_date = update_data["return_date"]
-
 
         if new_date:
 
@@ -209,20 +212,14 @@ async def update_loan(
                     detail="Return date cannot be before borrowed date"
                 )
 
-
         # Store naive datetime (DB uses naive datetimes)
         loan.return_date = new_date
 
 
-
-
     # Update fine
-
-
     if "fine_amount" in update_data:
 
         fine = update_data["fine_amount"]
-
 
         if fine < 0:
             raise HTTPException(
@@ -230,21 +227,16 @@ async def update_loan(
                 detail="Fine amount cannot be negative"
             )
 
-
         loan.fine_amount = fine
 
 
-
     # Additional validation
-
-
     # Returned loan must have return date
     if (
         loan.status == LoanStatus.RETURNED
         and loan.return_date is None
     ):
         loan.return_date = datetime.now()
-
 
 
     # Active loan should not have fine
@@ -258,7 +250,7 @@ async def update_loan(
         )
 
 
-
+    # Update loan in DB
     await session.commit()
     await session.refresh(loan)
 
@@ -307,7 +299,6 @@ async def delete_loan(
         loan_id
     )
 
-
     # 2. Check status
     if loan.status != LoanStatus.RETURNED:
 
@@ -315,7 +306,6 @@ async def delete_loan(
             status_code=409,
             detail="Only returned loans can be deleted"
         )
-
 
     # 3. Check fine
     if loan.fine_amount > 0:
@@ -325,12 +315,9 @@ async def delete_loan(
             detail="Loan with fine cannot be deleted"
         )
 
-
     # 4. Delete
     await session.delete(loan)
-
     await session.commit()
-
 
     return {
         "status": "deleted",
@@ -390,14 +377,14 @@ async def search_loans(
         )
 
 
-
     # Search
     if query:
 
+        # Normalize query
         q = query.strip().lower()
 
         if q:
-
+            # Search in title, full name and library names
             stmt = stmt.where(
                 or_(
                     DimBook.title.ilike(
@@ -415,7 +402,6 @@ async def search_loans(
             )
 
 
-
     # Count
     count_stmt = select(
         func.count()
@@ -423,11 +409,10 @@ async def search_loans(
         stmt.subquery()
     )
 
-
+    # Count all records
     total = (
         await session.exec(count_stmt)
     ).one()
-
 
 
     # Pagination
@@ -440,41 +425,31 @@ async def search_loans(
         .limit(limit)
     )
 
-
+    # Get records
     result = await session.exec(stmt)
-
     loans = result.all()
-
-
 
     # Response
     items = []
 
-
+    # Loop through records
     for loan, title, reader_name, library_name in loans:
-
+        # Append record to list
         items.append(
             {
                 "id": loan.id,
-
                 "book_copy_id": loan.book_copy_id,
                 "book_title": title,
-
                 "reader_id": loan.reader_id,
                 "reader_name": reader_name.title(),
-
                 "library_id": loan.library_id,
                 "library_name": library_name,
-
                 "status": loan.status,
-
                 "borrowed_at": loan.borrowed_at,
                 "return_date": loan.return_date,
-
                 "fine_amount": loan.fine_amount
             }
         )
-
 
 
     return {
@@ -533,11 +508,10 @@ async def get_reader_loans(
         stmt.subquery()
     )
 
-
+    # Total
     total = (
         await session.exec(count_stmt)
     ).one()
-
 
 
     # Pagination
@@ -550,41 +524,29 @@ async def get_reader_loans(
         )
     )
 
-
+    # Get data from database
     result = await session.exec(stmt)
-
     loans = result.all()
 
-
-
+    # Store data in list
     items = []
 
-
+    # Get data from database and format it for display in UI
     for loan, book_title, library_name in loans:
 
         items.append(
             {
                 "id": loan.id,
-
                 "book_title": book_title,
-
                 "book_copy_id": loan.book_copy_id,
-
                 "library_id": loan.library_id,
-
                 "library_name": library_name,
-
                 "status": loan.status,
-
                 "borrowed_at": loan.borrowed_at,
-
                 "return_date": loan.return_date,
-
                 "fine_amount": loan.fine_amount
             }
         )
-
-
 
     return {
         "items": items,

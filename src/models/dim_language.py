@@ -13,6 +13,7 @@ from .book_languages import BookLanguage
 #                       models
 # =====================================================
 
+# Type checking
 if TYPE_CHECKING:
     from .dim_book import DimBook
 
@@ -23,8 +24,10 @@ class DimLanguage(SQLModel, table=True):
     # Table name
     __tablename__ = "dim_language"
 
+    # Primary key
     id: int | None = Field(default=None, primary_key=True)
 
+    # Language code
     code: str = Field(
         index=True,
         unique=True,
@@ -32,12 +35,14 @@ class DimLanguage(SQLModel, table=True):
         max_length=10
     )
 
+    # Language name
     name: str | None = Field(
         default=None,
         index=True,
         max_length=100
     )
 
+    # Foreign keys to BookLanguage table
     books: list["DimBook"] = Relationship(
         back_populates="languages",
         link_model=BookLanguage,

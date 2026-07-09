@@ -13,6 +13,7 @@ from .book_genres import BookGenre
 #                       models
 # =====================================================
 
+# Type checking
 if TYPE_CHECKING:
     from .dim_book import DimBook
 
@@ -23,7 +24,14 @@ class DimGenre(SQLModel, table=True):
     # Table name
     __tablename__ = "dim_genre"
 
+    # Primary key
     id: int | None = Field(default=None, primary_key=True)
+
+    # Genre name
     name: str = Field(index=True, unique=True)
 
-    books: list["DimBook"] = Relationship(back_populates="genres", link_model=BookGenre)
+    # Foreign keys to BookGenre table
+    books: list["DimBook"] = Relationship(
+        back_populates="genres", 
+        link_model=BookGenre
+    )

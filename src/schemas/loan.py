@@ -17,6 +17,7 @@ from models import LoanStatus
 
 # Loan create schema
 class LoanCreate(BaseModel):
+    
     book_copy_id: int
     reader_id: int
     library_id: int
@@ -24,6 +25,7 @@ class LoanCreate(BaseModel):
 
 # Loan update schema
 class LoanUpdate(BaseModel):
+
     status: Optional[LoanStatus] = None
     return_date: Optional[datetime] = None
     fine_amount: Optional[float] = Field(default=None, ge=0)
@@ -31,6 +33,7 @@ class LoanUpdate(BaseModel):
 
 # Loan book schema
 class LoanBook(BaseModel):
+
     id: int
     title: str
     isbn: str
@@ -39,6 +42,7 @@ class LoanBook(BaseModel):
 
 # Loan reader schema
 class LoanReader(BaseModel):
+
     id: int
     full_name: str
     email: str
@@ -46,6 +50,7 @@ class LoanReader(BaseModel):
 
 # Loan library schema
 class LoanLibrary(BaseModel):
+
     id: int
     name: str
     city: str
@@ -84,6 +89,7 @@ class LoanSearchRead(BaseModel):
 
 # Loan search schema - wrapper for loan read schema
 class LoanSearchResponse(BaseModel):
+
     items: list[LoanSearchRead]
     total: int
     limit: int
@@ -93,17 +99,20 @@ class LoanSearchResponse(BaseModel):
 
 # Loan delete response schema
 class LoanDeleteResponse(BaseModel):
+
     status: str
     loan_id: int
 
 # Loan delete warning schema
 class LoanDeleteWarning(BaseModel):
+
     warning: str
     message: str
 
 
 # Reader loan read schema
 class ReaderLoanRead(BaseModel):
+
     id: int
     book_title: str
     book_copy_id: int

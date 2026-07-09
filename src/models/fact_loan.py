@@ -31,7 +31,9 @@ class FactLoan(SQLModel, table=True):
     # Primary key
     id: int | None = Field(default=None, primary_key=True)
 
+
     # Foreign keys
+    # Foreign key to DimBookCopy table
     book_copy_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_book_copy.id", ondelete="CASCADE"),
@@ -39,6 +41,7 @@ class FactLoan(SQLModel, table=True):
         )
     )
 
+    # Foreign key to DimReader table
     reader_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_reader.id", ondelete="CASCADE"),
@@ -46,6 +49,7 @@ class FactLoan(SQLModel, table=True):
         )
     )
 
+    # Foreign key to DimLibrary table
     library_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_library.id", ondelete="CASCADE"),
@@ -53,15 +57,18 @@ class FactLoan(SQLModel, table=True):
         )
     )
 
-    # Fact attributes
+    # Other attributes
+    # Loan status
     status: str = Field(default="active", index=True)
 
-
+    # Borrowed at
     borrowed_at: datetime = Field(
         default_factory=lambda: datetime.now(),
         index=True
     )
 
+    # Returned at (optional)
     return_date: Optional[datetime] = Field(default=None)
 
+    # Fine amount (default 0.0)
     fine_amount: float = Field(default=0.0)

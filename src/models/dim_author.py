@@ -13,6 +13,7 @@ from .book_authors import BookAuthor
 #                       models
 # =====================================================
 
+# Type checking
 if TYPE_CHECKING:
     from .dim_book import DimBook
 
@@ -31,4 +32,8 @@ class DimAuthor(SQLModel, table=True):
     country: Optional[str] = Field(default=None, index=True)
     birth_year: Optional[int] = Field(default=None)
 
-    books: list["DimBook"] = Relationship(back_populates="authors", link_model=BookAuthor)
+    # Foreign key to book authors association table
+    books: list["DimBook"] = Relationship(
+        back_populates="authors", 
+        link_model=BookAuthor
+    )

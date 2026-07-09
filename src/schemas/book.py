@@ -15,6 +15,7 @@ from models import BookImageType, BookCondition
 
 # Images
 class BookImageCreate(BaseModel):
+
     file_path: str = Field(min_length=1, max_length=500)
     image_type: BookImageType = BookImageType.COVER
     display_order: int = 0
@@ -22,6 +23,7 @@ class BookImageCreate(BaseModel):
 
 # Position of a physical copy
 class BookPositionCreate(BaseModel):
+
     shelf_id: int
     row: Optional[int] = None
     column: Optional[int] = None
@@ -30,6 +32,7 @@ class BookPositionCreate(BaseModel):
 
 # Book copy (physical copy)
 class BookCopyCreate(BaseModel):
+
     inventory_code: str = Field(min_length=1, max_length=50)
     condition: BookCondition = BookCondition.GOOD
 
@@ -39,6 +42,7 @@ class BookCopyCreate(BaseModel):
 
 # MAIN CREATE SCHEMA
 class BookCreate(BaseModel):
+
     title: str = Field(min_length=1, max_length=255)
     isbn: str = Field(min_length=5, max_length=20)
 
@@ -59,6 +63,7 @@ class BookCreate(BaseModel):
 
 # UPDATE SCHEMA
 class BookUpdate(BaseModel):
+
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
     isbn: Optional[str] = Field(default=None, min_length=5, max_length=20)
 
@@ -77,18 +82,21 @@ class BookUpdate(BaseModel):
 
 # Author short schema
 class AuthorShort(BaseModel):
+
     id: int
     name: str
 
 
 # Genre short schema
 class GenreShort(BaseModel):
+
     id: int
     name: str
 
 
 # Language short schema
 class LanguageShort(BaseModel):
+
     id: int
     code: str
     name: Optional[str] = None
@@ -96,6 +104,7 @@ class LanguageShort(BaseModel):
 
 # Image short schema
 class ImageRead(BaseModel):
+
     id: int
     file_path: str
     image_type: str
@@ -104,6 +113,7 @@ class ImageRead(BaseModel):
 
 # Book position schema
 class BookPositionRead(BaseModel):
+
     row: Optional[int] = None
     column: Optional[int] = None
     depth: Optional[int] = None
@@ -111,6 +121,7 @@ class BookPositionRead(BaseModel):
 
 # Shelf short schema
 class ShelfShort(BaseModel):
+
     id: int
     code: str
     section: Optional[str] = None
@@ -118,6 +129,7 @@ class ShelfShort(BaseModel):
 
 # Book copy read schema
 class CopyRead(BaseModel):
+
     id: int
     inventory_code: str
     condition: str
@@ -127,6 +139,7 @@ class CopyRead(BaseModel):
 
 # Book availability schema
 class BookAvailability(BaseModel):
+
     status: str
     total_copies: int
     available_copies: int
@@ -135,6 +148,7 @@ class BookAvailability(BaseModel):
 
 # Book read schema
 class BookRead(BaseModel):
+
     id: int
     title: str
     isbn: str
@@ -156,6 +170,7 @@ class BookRead(BaseModel):
 
 # Library short schema
 class LibraryShort(BaseModel):
+
     id: int
     name: str
     city: str
@@ -164,6 +179,7 @@ class LibraryShort(BaseModel):
 
 # Library availability schema
 class LibraryAvailability(BaseModel):
+
     id: int
     name: str
     city: str
@@ -176,6 +192,7 @@ class LibraryAvailability(BaseModel):
 
 # Book search schema
 class BookSearchItem(BaseModel):
+
     id: int
     title: str
     isbn: str
@@ -188,6 +205,7 @@ class BookSearchItem(BaseModel):
 
 # Book search response schema
 class BookSearchResponse(BaseModel):
+
     items: list[BookSearchItem]
 
     total: int
@@ -198,11 +216,13 @@ class BookSearchResponse(BaseModel):
 
 # Book delete response schema
 class BookDeleteResponse(BaseModel):
+
     status: str
 
 
 # Book delete warning schema
 class BookDeleteWarning(BaseModel):
+    
     warning: str
     copies_count: int | None = None
     message: str

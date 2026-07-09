@@ -23,6 +23,7 @@ from schemas.library import LibraryCreate, LibraryUpdate
 
 # Normalize library data
 def normalize_library(data: dict) -> dict:
+
     if "name" in data and data["name"]:
         data["name"] = data["name"].strip().lower()
 
@@ -36,6 +37,7 @@ def normalize_library(data: dict) -> dict:
 
 # Format library data for display in UI
 def format_library(lib: DimLibrary) -> DimLibrary:
+    
     return DimLibrary(
         id=lib.id,
         name=lib.name.title(),

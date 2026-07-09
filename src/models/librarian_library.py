@@ -17,7 +17,9 @@ class LibrarianLibrary(SQLModel, table=True):
     # Table name
     __tablename__ = "librarian_library"
 
-    # Relationships
+
+    # Foreign keys
+    # Foreign key to dim_librarian table
     librarian_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_librarian.id", ondelete="CASCADE"),
@@ -25,6 +27,7 @@ class LibrarianLibrary(SQLModel, table=True):
         )
     )
 
+    # Foreign key to dim_library table
     library_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_library.id", ondelete="CASCADE"),

@@ -93,7 +93,6 @@ async def search_shelves(
 
     # Pagination
     paginated_stmt = stmt.offset(offset).limit(limit)
-
     items = (await session.exec(paginated_stmt)).all()
 
     # Total shelves in library (WITHOUT filter)
@@ -164,7 +163,6 @@ async def create_shelf(
 
     # Save
     session.add(shelf)
-
     await session.commit()
     await session.refresh(shelf)
 

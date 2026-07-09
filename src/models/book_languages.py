@@ -17,6 +17,8 @@ class BookLanguage(SQLModel, table=True):
     # Table name
     __tablename__ = "book_languages"
 
+    # Composite primary key
+    # Foreign key to Book table
     book_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_book.id", ondelete="CASCADE"),
@@ -24,6 +26,7 @@ class BookLanguage(SQLModel, table=True):
         )
     )
 
+    # Foreign key to Language table
     language_id: int = Field(
         sa_column=Column(
             ForeignKey("dim_language.id", ondelete="CASCADE"),

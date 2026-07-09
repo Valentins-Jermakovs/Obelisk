@@ -312,9 +312,7 @@ async def delete_librarian(
 
     # Delete librarian
     await session.delete(librarian)
-
     await session.commit()
-
 
     return {
         "status": "deleted",

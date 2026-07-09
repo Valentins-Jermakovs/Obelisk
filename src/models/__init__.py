@@ -9,6 +9,8 @@ from .dim_librarian import DimLibrarian
 from .dim_reader import DimReader
 from .dim_shelf import DimShelf
 from .dim_book_copy import DimBookCopy, BookCondition
+from .dim_genre import DimGenre
+from .dim_language import DimLanguage
 # BOOK IMAGES
 from .book_image import BookImage, BookImageType
 # FACT LAYER
@@ -22,6 +24,3 @@ from .librarian_library import LibrarianLibrary
 from .book_authors import BookAuthor
 from .book_genres import BookGenre
 from .book_languages import BookLanguage
-from .dim_genre import DimGenre
-from .dim_language import DimLanguage
-# =====================================================

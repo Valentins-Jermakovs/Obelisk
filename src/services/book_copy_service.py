@@ -102,7 +102,6 @@ async def create_book_copy(
     )
 
     session.add(copy)
-
     await session.flush()
 
 
@@ -116,12 +115,8 @@ async def create_book_copy(
     )
 
     session.add(position)
-
-
     await session.commit()
-
     await session.refresh(copy)
-
 
     return copy
 
@@ -148,17 +143,18 @@ async def update_book_copy(
 
 
     # Check librarian access
+    # Get library id of book copy
     library_id = await _get_copy_library_id(
         session,
         copy_id
     )
 
+    # Validate librarian access to library
     await _validate_librarian_access_to_library(
         session,
         payload,
         library_id
     )
-
 
     # Get position
     position = (
@@ -175,25 +171,31 @@ async def update_book_copy(
             detail="Book position not found"
         )
 
-
+    # Set attributes of copy update data
     update_data = data.model_dump(
         exclude_unset=True
     )
 
 
-    # Inventory code
+    # Check for new inventory code
     if "inventory_code" in update_data:
+
+        # Check for duplicate code
         inventory_code_value = update_data["inventory_code"]
 
         if inventory_code_value is not None:
+
+            # Normalize the inventory code
             inventory_code = inventory_code_value.strip().upper()
 
+            # If the code is empty, it's not a duplicate
             if not inventory_code:
                 raise HTTPException(
                     status_code=422,
                     detail="Inventory code cannot be empty"
                 )
 
+            # Check for duplicate code
             existing = (
                 await session.exec(
                     select(DimBookCopy).where(
@@ -203,12 +205,14 @@ async def update_book_copy(
                 )
             ).first()
 
+            # If a duplicate code exists, raise an error
             if existing:
                 raise HTTPException(
                     status_code=409,
                     detail="Inventory code already exists"
                 )
 
+            # Update inventory code in the session
             copy.inventory_code = inventory_code
 
 
@@ -217,44 +221,49 @@ async def update_book_copy(
         copy.condition = update_data["condition"]
 
 
-    # Shelf
+    # Update shelf position if it is set
     if "shelf_id" in update_data and update_data["shelf_id"] is not None:
 
+        # Get the shelf from the session
         shelf = await session.get(
             DimShelf,
             update_data["shelf_id"]
         )
 
+        # If the shelf does not belong to the library, raise an error
         if not shelf:
             raise HTTPException(
                 status_code=404,
                 detail="Shelf not found"
             )
 
+        # If the shelf belongs to another library, raise an error
         if shelf.library_id != library_id:
             raise HTTPException(
                 status_code=409,
                 detail="Shelf belongs to another library"
             )
 
+        # Set the shelf id of the position
         position.shelf_id = shelf.id
 
 
     # Coordinates
+    # Check if row are provided
     if "row" in update_data and update_data["row"] is not None:
         position.row = update_data["row"]
-
+    # Check if column are provided
     if "column" in update_data and update_data["column"] is not None:
         position.column = update_data["column"]
-
+    # Check if depth is provided
     if "depth" in update_data and update_data["depth"] is not None:
         position.depth = update_data["depth"]
 
-
+    # Save changes to database
     await session.commit()
-
     await session.refresh(copy)
 
+    # Return book copy
     return copy
 
 
@@ -264,7 +273,7 @@ async def delete_book_copy(
     copy_id: int,
     payload: dict
 ):
-
+    
     # Get copy
     copy = await session.get(
         DimBookCopy,
@@ -298,13 +307,13 @@ async def delete_book_copy(
     )
 
     if loan:
-
+        # Check fine
         if loan.fine_amount > 0:
             raise HTTPException(
                 status_code=409,
                 detail="Book copy has unpaid fine"
             )
-
+        # Check status
         if loan.status not in (
             LoanStatus.RETURNED,
             LoanStatus.LOST
@@ -330,9 +339,7 @@ async def delete_book_copy(
 
     # Delete copy
     await session.delete(copy)
-
     await session.commit()
-
 
     return {
         "status": "deleted",
@@ -348,11 +355,8 @@ async def search_book_copies(
     limit: int = 10,
     offset: int = 0
 ):
-
-    # ===================================================
-    # Last loan subquery
-    # ===================================================
-
+    
+    # Last loan subquery for book copies with the latest loan
     last_loan_subquery = (
         select(
             FactLoan.book_copy_id,
@@ -365,10 +369,7 @@ async def search_book_copies(
     )
 
 
-    # ===================================================
-    # Main query
-    # ===================================================
-
+    # Main query - search by book title or code
     stmt = (
         select(
             DimBookCopy,
@@ -402,34 +403,28 @@ async def search_book_copies(
         )
     )
 
-
-    # ===================================================
     # Library access
-    # ===================================================
-
     library_ids = await _get_accessible_library_ids(
         session,
         payload
     )
 
-
     if library_ids is not None:
-
+        # Filter by library
         stmt = stmt.where(
             DimShelf.library_id.in_(library_ids)
         )
 
 
-    # ===================================================
-    # Search
-    # ===================================================
 
+    # Search
     if query:
 
+        # Normalize query data
         q = query.strip().lower()
 
+        # Search in title, inventory code and shelf code
         if q:
-
             stmt = stmt.where(
                 or_(
                     DimBook.title.ilike(
@@ -447,27 +442,19 @@ async def search_book_copies(
             )
 
 
-    # ===================================================
     # Count
-    # ===================================================
-
     count_stmt = select(
         func.count()
     ).select_from(
         stmt.subquery()
     )
-
-
+    # Count total
     total = (
         await session.exec(count_stmt)
     ).one()
 
 
-
-    # ===================================================
     # Pagination
-    # ===================================================
-
     stmt = (
         stmt
         .order_by(
@@ -477,20 +464,14 @@ async def search_book_copies(
         .limit(limit)
     )
 
-
     result = await session.exec(stmt)
-
     rows = result.all()
 
 
-
-    # ===================================================
     # Response
-    # ===================================================
-
     items = []
 
-
+    # Loop through rows
     for (
         copy,
         title,
@@ -502,44 +483,32 @@ async def search_book_copies(
         loan_status
     ) in rows:
 
-
         # Availability
         if loan_status is None:
             availability = "available"
-
         elif loan_status == LoanStatus.RETURNED:
             availability = "available"
-
         else:
             availability = loan_status
 
-
-
+        # Add to list
         items.append(
             {
                 "id": copy.id,
-
                 "book_id": copy.book_id,
                 "title": title,
-
                 "inventory_code": copy.inventory_code,
                 "condition": copy.condition,
-
-
                 "library_id": library_id,
-
                 "shelf": {
                     "code": shelf_code,
                     "row": row,
                     "column": column,
                     "depth": depth
                 },
-
-
                 "loan_status": availability
             }
         )
-
 
 
     return {

@@ -4,9 +4,6 @@
 # Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
-# Models:
-from models import LoanStatus
 
 
 
@@ -16,6 +13,7 @@ from models import LoanStatus
 
 # Library create schema
 class LibraryCreate(BaseModel):
+
     name: str = Field(min_length=1, max_length=255)
     city: str = Field(min_length=1, max_length=100)
     address: str = Field(min_length=1, max_length=255)
@@ -23,6 +21,7 @@ class LibraryCreate(BaseModel):
 
 # Library update schema
 class LibraryUpdate(BaseModel):
+
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     city: Optional[str] = Field(default=None, min_length=1, max_length=100)
     address: Optional[str] = Field(default=None, min_length=1, max_length=255)
@@ -30,6 +29,7 @@ class LibraryUpdate(BaseModel):
 
 # Library read schema
 class LibraryRead(BaseModel):
+
     id: int
     name: str
     city: str
@@ -38,12 +38,14 @@ class LibraryRead(BaseModel):
 
 # Library delete response schema
 class LibraryDeleteResponse(BaseModel):
+
     status: str
     forced: bool = False
 
 
 # Library delete warning respons
 class LibraryDeleteWarning(BaseModel):
+
     warning: str
     details: dict
     message: str
@@ -51,6 +53,7 @@ class LibraryDeleteWarning(BaseModel):
 
 # Search response schema
 class LibrarySearchResponse(BaseModel):
+
     items: list["LibraryRead"]
 
     total: int

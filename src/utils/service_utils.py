@@ -404,6 +404,8 @@ async def _create_copies(
 #         Helper functions for book_copy service
 # ===================================================
 
+
+# Get book's physical copy library ID
 async def _get_copy_library_id(
     session: AsyncSession,
     copy_id: int
@@ -435,6 +437,7 @@ async def _get_copy_library_id(
     return library_id
 
 
+# Get last loan data from database and return last loan data
 async def _get_last_loan(
     session: AsyncSession,
     copy_id: int
