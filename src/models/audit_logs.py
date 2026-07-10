@@ -1,55 +1,96 @@
 # =====================================================
 #                       imports
 # =====================================================
-# Libraries:
-from sqlmodel import SQLModel, Field
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from sqlalchemy import Column, JSON
-from enum import Enum
-
+from sqlmodel import Field, SQLModel
 
 
 # =====================================================
-#                       models
+#                       enums
 # =====================================================
 
 # Entity types
 class EntityType(str, Enum):
     BOOK = "book"
     READER = "reader"
+    AUTHOR = "author"
+    LIBRARY = "library"
+    LIBRARIAN = "librarian"
+    SHELF = "shelf"
     LOAN = "loan"
 
 
-# Audit log model
+# Audit actions
+class AuditAction(str, Enum):
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+
+    ISSUE = "issue"
+    RETURN = "return"
+
+    OTHER = "other"
+
+
+# =====================================================
+#                       models
+# =====================================================
+
 class AuditLog(SQLModel, table=True):
 
-    # Tablename
     __tablename__ = "audit_logs"
 
-    # Primary key
-    id: int | None = Field(default=None, primary_key=True)
 
-    # Who did it?
-    user_id: int = Field(index=True)
+    # Primary key
+    id: int | None = Field(
+        default=None,
+        primary_key=True
+    )
+
+
+    # Who performed action
+    user_id: int = Field(
+        index=True
+    )
+
 
     # Action type
-    action: str = Field(index=True)
+    action: AuditAction = Field(
+        index=True
+    )
 
-    # Entity type
-    entity_type: EntityType | None = Field(index=True)
 
-    # Operation status
-    success: bool = Field(default=True)
+    # Object type
+    entity_type: EntityType | None = Field(
+        default=None,
+        index=True
+    )
 
-    # Meta data (JSON)
+
+    # Human-readable description
+    description: str = Field(
+        index=True
+    )
+
+
+    # Was operation successful?
+    success: bool = Field(
+        default=True
+    )
+
+
+    # Additional information
     meta: dict[str, Any] = Field(
         sa_column=Column(JSON),
         default_factory=dict
     )
 
-    # When it happened
+
+    # Time
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(),
+        default_factory=datetime.now,
         index=True
     )

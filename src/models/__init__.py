@@ -18,7 +18,7 @@ from .fact_loan import FactLoan, LoanStatus
 # PHYSICAL TRACKING
 from .book_position import BookPosition
 # OBSERVABILITY
-from .audit_logs import AuditLog
+from .audit_logs import AuditLog, AuditAction, EntityType
 # M2M
 from .librarian_library import LibrarianLibrary
 from .book_authors import BookAuthor

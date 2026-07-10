@@ -57,7 +57,8 @@ async def create_author_route(
 ):
     return await create_author(
         session=session, 
-        author_data=author
+        author_data=author,
+        payload=payload
     )
 
 
@@ -101,7 +102,8 @@ async def update_author_route(
     return await update_author(
         session=session,
         author_id=author_id,
-        author_data=author
+        author_data=author,
+        payload=payload
     )
 
 
@@ -123,5 +125,6 @@ async def delete_author_route(
     return await delete_author(
         session=session,
         author_id=author_id,
-        force=force
+        force=force,
+        payload=payload
     )

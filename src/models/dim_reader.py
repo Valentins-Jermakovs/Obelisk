@@ -50,5 +50,5 @@ class DimReader(SQLModel, table=True):
 
     # Registration
     registered_at: datetime = Field(
-        default_factory=datetime.utcnow
+        default_factory=datetime.now
     )
