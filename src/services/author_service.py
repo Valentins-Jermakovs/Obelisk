@@ -98,7 +98,7 @@ async def create_author(
     # Add author to the session
     session.add(author)
 
-    # Get generated ID
+    # Flush the changes to the database
     await session.flush()
 
     # Write audit log
