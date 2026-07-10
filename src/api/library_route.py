@@ -54,7 +54,8 @@ async def create_library_route(
 ):
     return await create_library(
         session=session, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -114,7 +115,8 @@ async def update_library_route(
     return await update_library(
         session=session, 
         library_id=library_id, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -134,5 +136,6 @@ async def delete_library_route(
     return await delete_library(
         session=session,
         library_id=library_id,
-        force=force
+        force=force,
+        payload=payload
     )

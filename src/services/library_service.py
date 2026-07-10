@@ -17,10 +17,16 @@ from models import (
     BookAuthor,
     BookGenre,
     BookLanguage,
-    BookImage
+    BookImage,
+    AuditAction, 
+    EntityType
 )
 # Schemas:
 from schemas.library import LibraryCreate, LibraryUpdate
+from services.audit_service import (
+    write_audit_log, 
+    write_failed_audit_log
+)
 
 
 
@@ -56,7 +62,8 @@ def format_library(lib: DimLibrary) -> DimLibrary:
 # Create library
 async def create_library(
     session: AsyncSession, 
-    data_in: LibraryCreate
+    data_in: LibraryCreate,
+    payload: dict
 ):
     # Normalize the data for storage in the database
     data = normalize_library(data_in.model_dump())
@@ -68,6 +75,24 @@ async def create_library(
 
     # Check for a duplicate library
     if (await session.exec(stmt)).first():
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARY,
+            description="Failed to create library",
+            error="Library already exists",
+            library_name=data["name"].title(),
+            city=data["city"].title(),
+            address=data["address"],
+        )
+
+        # Commit audit log
+        await session.commit()
+
+        # Raise an error
         raise HTTPException(
             status_code=409, 
             detail="Library already exists"
@@ -78,9 +103,30 @@ async def create_library(
 
     # Add the library to the session and commit it
     session.add(library)
+
+    # Flush to get generated ID
+    await session.flush()
+
+    # Write audit log
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.CREATE,
+        entity_type=EntityType.LIBRARY,
+        description=f"Created library '{library.name.title()}'",
+        library_id=library.id,
+        library_name=library.name.title(),
+        city=library.city.title(),
+        address=library.address,
+    )
+
+    # Commit everything
     await session.commit()
+
+    # Refresh data
     await session.refresh(library)
 
+    # Return formatted object (library)
     return format_library(library)
 
 
@@ -146,16 +192,43 @@ async def get_library(
 async def update_library(
     session: AsyncSession, 
     library_id: int, 
-    data_in: LibraryUpdate
+    data_in: LibraryUpdate,
+    payload: dict
 ):
     # Get the library by ID
     library = await session.get(DimLibrary, library_id)
 
     if not library:
-        raise HTTPException(404, "Library not found")
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.LIBRARY,
+            description=f"Failed to update library with id {library_id}",
+            error="Library not found",
+            library_id=library_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise an error
+        raise HTTPException(
+            status_code=404, 
+            detail="Library not found"
+        )
 
     # Normalize the data
     data = normalize_library(data_in.model_dump(exclude_unset=True))
+
+    # Save old values for audit
+    old_data = {
+        "name": library.name,
+        "city": library.city,
+        "address": library.address,
+    }
 
     # Unique name check
     if "name" in data:
@@ -165,6 +238,23 @@ async def update_library(
         )
 
         if (await session.exec(stmt)).first():
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.UPDATE,
+                entity_type=EntityType.LIBRARY,
+                description=f"Failed to update library '{library.name.title()}'",
+                error="Library name already exists",
+                library_id=library.id,
+                library_name=data["name"].title(),
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Raise an error
             raise HTTPException(
                 status_code=409, 
                 detail="Library name already exists"
@@ -174,10 +264,36 @@ async def update_library(
     for k, v in data.items():
         setattr(library, k, v)
 
+
+    # Flush changes
+    await session.flush()
+
+    # Save new values for audit
+    new_data = {
+        "name": library.name,
+        "city": library.city,
+        "address": library.address,
+    }
+
+    # Write audit log
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.UPDATE,
+        entity_type=EntityType.LIBRARY,
+        description=f"Updated library '{library.name.title()}'",
+        library_id=library.id,
+        old_data=old_data,
+        new_data=new_data,
+    )
+
     # Commit the changes
     await session.commit()
+
+    # Refresh the library object
     await session.refresh(library)
 
+    # Return the updated library object
     return format_library(library)
 
 
@@ -185,12 +301,29 @@ async def update_library(
 async def delete_library(
     session: AsyncSession,
     library_id: int,
+    payload: dict,
     force: bool = False
 ):
     # Check if the library exists
     library = await session.get(DimLibrary, library_id)
 
     if not library:
+
+        # Write audit error log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LIBRARY,
+            description=f"Failed to delete library with id {library_id}",
+            error="Library not found",
+            library_id=library_id,
+        )
+
+        # Commit audit log
+        await session.commit()
+
+        # Return error response
         raise HTTPException(
             status_code=404, 
             detail="Library not found"
@@ -232,6 +365,31 @@ async def delete_library(
     has_relations = bool(shelves or loans or links or related_books or related_copies)
 
     if has_relations and not force:
+
+        # Write audit error log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LIBRARY,
+            description=f"Failed to delete library '{library.name.title()}'",
+            error="Library has related data",
+            library_id=library.id,
+            library_name=library.name.title(),
+            force=force,
+            related_data={
+                "shelves": len(shelves),
+                "loans": len(loans),
+                "librarian_links": len(links),
+                "books": len(related_books),
+                "copies": len(related_copies)
+            }
+        )
+
+        # Commit error audit log
+        await session.commit()
+
+        # Return warning response
         return {
             "warning": "Library has related data",
             "details": {
@@ -296,10 +454,37 @@ async def delete_library(
         for loan in loans:
             await session.delete(loan)
 
+
     # DELETE LIBRARY
+    # Save old data
+    library_name = library.name.title()
+
+    # Delete
     await session.delete(library)
+
+    # Flush pending deletes before writing audit log
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.DELETE,
+        entity_type=EntityType.LIBRARY,
+        description=f"Deleted library '{library_name}'",
+        library_id=library_id,
+        library_name=library_name,
+        force=force,
+        deleted_books=len(related_books),
+        deleted_copies=len(related_copies),
+        deleted_shelves=len(shelves),
+        deleted_loans=len(loans),
+        deleted_librarian_links=len(links),
+    )
+
+    # Commit everything
     await session.commit()
 
+    # Return the response
     return {
         "status": "deleted",
         "forced": force,
