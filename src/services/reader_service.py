@@ -50,10 +50,20 @@ async def create_reader(
             detail="Reader already exists"
         )
 
+    # Validate phone (optional)
+    phone_val = None
+    if hasattr(data_in, 'phone') and data_in.phone:
+        phone_pattern = re.compile(r"^\+?[0-9\s\-\(\)]{7,20}$")
+        if not phone_pattern.match(data_in.phone.strip()):
+            raise HTTPException(status_code=409, detail="Invalid phone")
+        phone_val = data_in.phone.strip()
+
     # Create the new READER
     reader = DimReader(
         full_name=format_full_name(data_in.full_name),
-        email=email
+        email=email,
+        phone=phone_val,
+        birth_date=(data_in.birth_date if hasattr(data_in, 'birth_date') else None)
     )
 
     # Add the new READER to the database
@@ -64,7 +74,10 @@ async def create_reader(
     return {
         "id": reader.id,
         "full_name": reader.full_name,
-        "email": reader.email
+        "email": reader.email,
+        "phone": reader.phone,
+        "birth_date": reader.birth_date,
+        "registered_at": reader.registered_at
     }
 
 
@@ -121,6 +134,20 @@ async def update_reader(
     if "full_name" in data:
         reader.full_name = format_full_name(data["full_name"])
 
+    # Update phone
+    if "phone" in data:
+        if data["phone"]:
+            phone_pattern = re.compile(r"^\+?[0-9\s\-\(\)]{7,20}$")
+            if not phone_pattern.match(data["phone"].strip()):
+                raise HTTPException(status_code=409, detail="Invalid phone")
+            reader.phone = data["phone"].strip()
+        else:
+            reader.phone = None
+
+    # Update birth_date
+    if "birth_date" in data:
+        reader.birth_date = data["birth_date"]
+
 
     # Update READER
     await session.commit()
@@ -129,7 +156,10 @@ async def update_reader(
     return {
         "id": reader.id,
         "full_name": reader.full_name,
-        "email": reader.email
+        "email": reader.email,
+        "phone": reader.phone,
+        "birth_date": reader.birth_date,
+        "registered_at": reader.registered_at
     }
 
 # Search reader by email, full_name
@@ -149,7 +179,8 @@ async def search_readers(
         base_stmt = base_stmt.where(
             or_(
                 DimReader.full_name.ilike(f"%{q}%"),
-                DimReader.email.ilike(f"%{q}%")
+                DimReader.email.ilike(f"%{q}%"),
+                DimReader.phone.ilike(f"%{q}%")
             )
         )
 
@@ -167,7 +198,10 @@ async def search_readers(
             {
                 "id": r.id,
                 "full_name": format_full_name(r.full_name),
-                "email": r.email
+                "email": r.email,
+                "phone": r.phone,
+                "birth_date": r.birth_date,
+                "registered_at": r.registered_at
             }
             for r in readers
         ],

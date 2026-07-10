@@ -26,6 +26,7 @@ from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate
 from services.book_service import (
     create_book, search_books, get_book, update_book, delete_book
 )
+from services.library_service import delete_library
 
 @pytest.mark.asyncio
 async def test_book_crud_flow():
@@ -207,6 +208,62 @@ async def test_create_book_fails_when_multiple_copies_share_the_same_position():
 
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail == 'Позиция уже занята'
+
+
+@pytest.mark.asyncio
+async def test_deleting_library_also_removes_associated_books_and_copies():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Library Author Two')
+        genre = DimGenre(name='Library Genre Two')
+        language = DimLanguage(code='it', name='Italian')
+        library = DimLibrary(name='Delete Me Library', city='CityD', address='AddrD')
+
+        session.add_all([author, genre, language, library])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+
+        shelf = DimShelf(library_id=library.id, code='DEL-01')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        book = await create_book(
+            session,
+            BookCreate(
+                title='Library Book',
+                isbn='ISBN-LIB-DELETE',
+                annotation='Delete me with the library',
+                publication_year=2025,
+                authors=[author.id],
+                genres=[genre.id],
+                languages=[language.id],
+                copies=[BookCopyCreate(
+                    inventory_code='INV-LIB-DELETE',
+                    condition='good',
+                    position=BookPositionCreate(shelf_id=shelf.id)
+                )]
+            )
+        )
+
+        assert book.id is not None
+
+        result = await delete_library(session, library.id, force=True)
+
+        assert result.get('status') == 'deleted'
+
+        remaining_book = await session.get(DimBook, book.id)
+        remaining_copy = (await session.exec(
+            select(DimBookCopy).where(DimBookCopy.inventory_code == 'INV-LIB-DELETE')
+        )).first()
+        assert remaining_book is None
+        assert remaining_copy is None
 
 
 @pytest.mark.asyncio

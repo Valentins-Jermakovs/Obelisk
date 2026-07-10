@@ -7,10 +7,17 @@ from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 # Models:
 from models import (
-    DimLibrary, 
-    DimShelf, 
-    FactLoan, 
-    LibrarianLibrary
+    DimLibrary,
+    DimShelf,
+    FactLoan,
+    LibrarianLibrary,
+    DimBook,
+    DimBookCopy,
+    BookPosition,
+    BookAuthor,
+    BookGenre,
+    BookLanguage,
+    BookImage
 )
 # Schemas:
 from schemas.library import LibraryCreate, LibraryUpdate
@@ -203,9 +210,26 @@ async def delete_library(
         select(LibrarianLibrary).where(LibrarianLibrary.library_id == library_id)
     )).all()
 
+    related_books = (await session.exec(
+        select(DimBook)
+        .join(DimBookCopy, DimBookCopy.book_id == DimBook.id)
+        .join(BookPosition, BookPosition.book_copy_id == DimBookCopy.id)
+        .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
+        .where(DimShelf.library_id == library_id)
+        .distinct()
+    )).all()
+
+    related_copies = (await session.exec(
+        select(DimBookCopy)
+        .join(BookPosition, BookPosition.book_copy_id == DimBookCopy.id)
+        .join(DimShelf, BookPosition.shelf_id == DimShelf.id)
+        .where(DimShelf.library_id == library_id)
+        .distinct()
+    )).all()
+
 
     # IF RELATIONS EXIST -> BLOCK OR WARN
-    has_relations = bool(shelves or loans or links)
+    has_relations = bool(shelves or loans or links or related_books or related_copies)
 
     if has_relations and not force:
         return {
@@ -213,7 +237,9 @@ async def delete_library(
             "details": {
                 "shelves": len(shelves),
                 "loans": len(loans),
-                "librarian_links": len(links)
+                "librarian_links": len(links),
+                "books": len(related_books),
+                "copies": len(related_copies)
             },
             "message": "Pass force=True to delete anyway"
         }
@@ -221,6 +247,46 @@ async def delete_library(
 
     # FORCE DELETE LOGIC
     if force:
+        for book in related_books:
+            copies = (await session.exec(
+                select(DimBookCopy).where(DimBookCopy.book_id == book.id)
+            )).all()
+            copy_ids = [copy.id for copy in copies if copy.id is not None]
+
+            if copy_ids:
+                await session.exec(
+                    BookPosition.__table__.delete().where(
+                        BookPosition.book_copy_id.in_(copy_ids)
+                    )
+                )
+
+                await session.exec(
+                    FactLoan.__table__.delete().where(
+                        FactLoan.book_copy_id.in_(copy_ids)
+                    )
+                )
+
+                await session.exec(
+                    DimBookCopy.__table__.delete().where(
+                        DimBookCopy.id.in_(copy_ids)
+                    )
+                )
+
+            await session.exec(
+                BookAuthor.__table__.delete().where(BookAuthor.book_id == book.id)
+            )
+            await session.exec(
+                BookGenre.__table__.delete().where(BookGenre.book_id == book.id)
+            )
+            await session.exec(
+                BookLanguage.__table__.delete().where(BookLanguage.book_id == book.id)
+            )
+            await session.exec(
+                BookImage.__table__.delete().where(BookImage.book_id == book.id)
+            )
+
+            await session.delete(book)
+
         for s in shelves:
             await session.delete(s)
 
@@ -230,12 +296,13 @@ async def delete_library(
         for loan in loans:
             await session.delete(loan)
 
-
     # DELETE LIBRARY
     await session.delete(library)
     await session.commit()
 
     return {
         "status": "deleted",
-        "forced": force
+        "forced": force,
+        "deleted_books": len(related_books),
+        "deleted_copies": len(related_copies)
     }

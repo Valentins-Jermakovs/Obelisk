@@ -3,7 +3,7 @@
 # =====================================================
 # Libraries:
 from sqlmodel import SQLModel, Field
-
+from datetime import datetime, date
 
 
 # =====================================================
@@ -22,6 +22,33 @@ class DimReader(SQLModel, table=True):
         primary_key=True
     )
     
+
     # User data
-    full_name: str = Field(index=True)
-    email: str = Field(index=True, unique=True)
+    # Username
+    full_name: str = Field(
+        index=True, 
+        max_length=255
+    )
+
+    # Email
+    email: str = Field(
+        unique=True,
+        index=True,
+        max_length=255
+    )
+
+    # Phone
+    phone: str | None = Field(
+        default=None,
+        max_length=20
+    )
+
+    # Birth date
+    birth_date: date | None = Field(
+        default=None
+    )
+
+    # Registration
+    registered_at: datetime = Field(
+        default_factory=datetime.utcnow
+    )
