@@ -17,6 +17,8 @@ class EntityType(str, Enum):
     BOOK = "book"
     READER = "reader"
     AUTHOR = "author"
+    GENRE = "genre"
+    LANGUAGE = "language"
     LIBRARY = "library"
     LIBRARIAN = "librarian"
     SHELF = "shelf"

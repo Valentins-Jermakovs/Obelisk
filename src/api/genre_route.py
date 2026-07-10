@@ -52,7 +52,8 @@ async def create(
 ):
     return await create_genre(
         session=session, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -95,7 +96,8 @@ async def update(
     return await update_genre(
         session=session, 
         genre_id=genre_id,
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -115,5 +117,6 @@ async def delete(
     return await delete_genre(
         session=session, 
         genre_id=genre_id, 
-        force=force
+        force=force,
+        payload=payload
     )
