@@ -30,7 +30,14 @@ from models import (
     DimBook, 
     DimBookCopy, 
     DimReader,
-    DimLibrary
+    DimLibrary,
+    AuditAction, 
+    EntityType
+)
+# Services:
+from services.audit_service import (
+    write_audit_log, 
+    write_failed_audit_log
 )
 
 
@@ -45,80 +52,156 @@ async def create_loan(
     data: LoanCreate,
     payload: dict
 ):
-    
-    # Validate access to library
-    await _validate_librarian_access_to_library(
-        session,
-        payload,
-        data.library_id
-    )
+    try:
+        # Validate access to library
+        await _validate_librarian_access_to_library(
+            session,
+            payload,
+            data.library_id
+        )
 
-    # Validate reader
-    await _validate_reader(
-        session,
-        data.reader_id
-    )
+        # Validate reader
+        await _validate_reader(
+            session,
+            data.reader_id
+        )
 
-    # Validate book copy
-    await _validate_book_copy(
-        session,
-        data.book_copy_id
-    )
+        # Validate copy
+        await _validate_book_copy(
+            session,
+            data.book_copy_id
+        )
 
-    # Validate library
-    await _validate_copy_library(
-        session,
-        data.book_copy_id,
-        data.library_id
-    )
+        # Validate library
+        await _validate_copy_library(
+            session,
+            data.book_copy_id,
+            data.library_id
+        )
 
-    # Check if copy is available
-    await _check_copy_available(
-        session,
-        data.book_copy_id
-    )
+        # Check availability
+        await _check_copy_available(
+            session,
+            data.book_copy_id
+        )
 
-    # Create loan
-    loan = await _create_loan(
-        session,
-        data
-    )
+        # Create loan
+        loan = await _create_loan(
+            session,
+            data
+        )
 
-    # Commit changes to database
-    await session.commit()
-    await session.refresh(loan)
+        await session.flush()
 
 
-    # Build response matching LoanRead schema
-    # Fetch related entities
-    book_copy = await session.get(DimBookCopy, loan.book_copy_id)
-    book = await session.get(DimBook, book_copy.book_id)
-    reader = await session.get(DimReader, loan.reader_id)
-    library = await session.get(DimLibrary, loan.library_id)
+        # Success audit
+        await write_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LOAN,
+            description=f"Created loan #{loan.id}",
+            loan_id=loan.id,
+            reader_id=loan.reader_id,
+            library_id=loan.library_id,
+            book_copy_id=loan.book_copy_id,
+            borrowed_at=loan.borrowed_at,
+            return_date=loan.return_date,
+            status=loan.status,
+        )
 
-    return {
-        "id": loan.id,
-        "status": loan.status,
-        "borrowed_at": loan.borrowed_at,
-        "return_date": loan.return_date,
-        "fine_amount": loan.fine_amount,
-        "reader": {
-            "id": reader.id,
-            "full_name": reader.full_name,
-            "email": reader.email,
-        },
-        "library": {
-            "id": library.id,
-            "name": library.name,
-            "city": library.city,
-        },
-        "book": {
-            "id": book.id,
-            "title": book.title,
-            "isbn": book.isbn,
-            "inventory_code": book_copy.inventory_code,
-        },
-    }
+        await session.commit()
+        await session.refresh(loan)
+
+        # Fetch related entities
+        book_copy = await session.get(
+            DimBookCopy,
+            loan.book_copy_id
+        )
+
+        book = await session.get(
+            DimBook,
+            book_copy.book_id
+        )
+
+        reader = await session.get(
+            DimReader,
+            loan.reader_id
+        )
+
+        library = await session.get(
+            DimLibrary,
+            loan.library_id
+        )
+
+        return {
+            "id": loan.id,
+            "status": loan.status,
+            "borrowed_at": loan.borrowed_at,
+            "return_date": loan.return_date,
+            "fine_amount": loan.fine_amount,
+            "reader": {
+                "id": reader.id,
+                "full_name": reader.full_name,
+                "email": reader.email,
+            },
+            "library": {
+                "id": library.id,
+                "name": library.name,
+                "city": library.city,
+            },
+            "book": {
+                "id": book.id,
+                "title": book.title,
+                "isbn": book.isbn,
+                "inventory_code": book_copy.inventory_code,
+            },
+        }
+
+    except HTTPException as e:
+
+        await session.rollback()
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LOAN,
+            description="Failed to create loan",
+            error=e.detail,
+            reader_id=data.reader_id,
+            library_id=data.library_id,
+            book_copy_id=data.book_copy_id,
+        )
+
+        await session.commit()
+
+        raise
+
+    except Exception as e:
+
+        await session.rollback()
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LOAN,
+            description="Failed to create loan",
+            error=str(e),
+            reader_id=data.reader_id,
+            library_id=data.library_id,
+            book_copy_id=data.book_copy_id,
+        )
+
+        await session.commit()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create loan: {str(e)}"
+        )
+
+
 
 
 # Update loan
@@ -127,162 +210,244 @@ async def update_loan(
     loan_id: int,
     data: LoanUpdate,
     payload: dict
-) -> FactLoan:
+):
+    try:
 
-
-    # 1. Get loan and check librarian access
-    loan = await _get_accessible_loan(
-        session,
-        payload,
-        loan_id
-    )
-
-
-    # 2. Get provided fields only
-    update_data = data.model_dump(
-        exclude_unset=True
-    )
-
-
-
-    # Update status
-    if "status" in update_data:
-
-        new_status = update_data["status"]
-
-        # Returned loan is final
-        if (
-            loan.status == LoanStatus.RETURNED
-            and new_status != LoanStatus.RETURNED
-        ):
-            raise HTTPException(
-                status_code=409,
-                detail="Returned loan cannot be reopened"
-            )
-
-
-        # LOST -> cannot return normally
-        if (
-            loan.status == LoanStatus.LOST
-            and new_status == LoanStatus.ACTIVE
-        ):
-            raise HTTPException(
-                status_code=409,
-                detail="Lost loan cannot become active"
-            )
-
-        # Update fields
-        loan.status = new_status
-
-
-        # Auto dates
-        # Set to return date for returned loans
-        if new_status == LoanStatus.RETURNED:
-
-            if loan.return_date is None:
-                loan.return_date = datetime.now()
-
-        # Lost loan should have return date
-        elif new_status == LoanStatus.LOST:
-
-            if loan.return_date is None:
-                loan.return_date = datetime.now()
-
-        # Active loan should not have return date
-        elif new_status == LoanStatus.ACTIVE:
-
-            # Active loan should not have return date
-            loan.return_date = None
-
-
-    # Update return date
-    if "return_date" in update_data:
-
-        new_date = update_data["return_date"]
-
-        if new_date:
-
-            # Normalize timezone-aware incoming date to naive UTC for comparison
-            if new_date.tzinfo is not None:
-                new_date = new_date.astimezone(timezone.utc).replace(tzinfo=None)
-
-            if new_date < loan.borrowed_at:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Return date cannot be before borrowed date"
-                )
-
-        # Store naive datetime (DB uses naive datetimes)
-        loan.return_date = new_date
-
-
-    # Update fine
-    if "fine_amount" in update_data:
-
-        fine = update_data["fine_amount"]
-
-        if fine < 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Fine amount cannot be negative"
-            )
-
-        loan.fine_amount = fine
-
-
-    # Additional validation
-    # Returned loan must have return date
-    if (
-        loan.status == LoanStatus.RETURNED
-        and loan.return_date is None
-    ):
-        loan.return_date = datetime.now()
-
-
-    # Active loan should not have fine
-    if (
-        loan.status == LoanStatus.ACTIVE
-        and loan.fine_amount > 0
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail="Active loan cannot have fine"
+        # Get loan
+        loan = await _get_accessible_loan(
+            session,
+            payload,
+            loan_id
         )
 
 
-    # Update loan in DB
-    await session.commit()
-    await session.refresh(loan)
+        # Save old data
+        old_data = {
+            "status": loan.status,
+            "borrowed_at": loan.borrowed_at,
+            "return_date": loan.return_date,
+            "fine_amount": loan.fine_amount,
+        }
 
-    # Build response matching LoanRead schema
-    book_copy = await session.get(DimBookCopy, loan.book_copy_id)
-    book = await session.get(DimBook, book_copy.book_id)
-    reader = await session.get(DimReader, loan.reader_id)
-    library = await session.get(DimLibrary, loan.library_id)
 
-    return {
-        "id": loan.id,
-        "status": loan.status,
-        "borrowed_at": loan.borrowed_at,
-        "return_date": loan.return_date,
-        "fine_amount": loan.fine_amount,
-        "reader": {
-            "id": reader.id,
-            "full_name": reader.full_name,
-            "email": reader.email,
-        },
-        "library": {
-            "id": library.id,
-            "name": library.name,
-            "city": library.city,
-        },
-        "book": {
-            "id": book.id,
-            "title": book.title,
-            "isbn": book.isbn,
-            "inventory_code": book_copy.inventory_code,
-        },
-    }
+        # Get only provided fields
+        update_data = data.model_dump(
+            exclude_unset=True
+        )
+
+
+        # Update status
+        if "status" in update_data:
+
+            new_status = update_data["status"]
+
+            if (
+                loan.status == LoanStatus.RETURNED
+                and new_status != LoanStatus.RETURNED
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Returned loan cannot be reopened"
+                )
+
+
+            if (
+                loan.status == LoanStatus.LOST
+                and new_status == LoanStatus.ACTIVE
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Lost loan cannot become active"
+                )
+
+            loan.status = new_status
+
+            if new_status == LoanStatus.RETURNED:
+
+                if loan.return_date is None:
+                    loan.return_date = datetime.now()
+
+            elif new_status == LoanStatus.LOST:
+
+                if loan.return_date is None:
+                    loan.return_date = datetime.now()
+
+            elif new_status == LoanStatus.ACTIVE:
+                loan.return_date = None
+
+
+        # Update return date
+        if "return_date" in update_data:
+
+            new_date = update_data["return_date"]
+
+            if new_date:
+
+                if new_date.tzinfo is not None:
+                    new_date = (
+                        new_date
+                        .astimezone(timezone.utc)
+                        .replace(tzinfo=None)
+                    )
+
+                if new_date < loan.borrowed_at:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Return date cannot be before borrowed date"
+                    )
+
+            loan.return_date = new_date
+
+
+        # Update fine
+        if "fine_amount" in update_data:
+
+            fine = update_data["fine_amount"]
+
+            if fine < 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Fine amount cannot be negative"
+                )
+
+            loan.fine_amount = fine
+
+
+        # Final validation
+        if (
+            loan.status == LoanStatus.RETURNED
+            and loan.return_date is None
+        ):
+            loan.return_date = datetime.now()
+
+
+        if (
+            loan.status == LoanStatus.ACTIVE
+            and loan.fine_amount > 0
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Active loan cannot have fine"
+            )
+
+
+        await session.flush()
+
+
+        # Save new data
+        new_data = {
+            "status": loan.status,
+            "borrowed_at": loan.borrowed_at,
+            "return_date": loan.return_date,
+            "fine_amount": loan.fine_amount,
+        }
+
+
+        # Success audit
+        await write_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.LOAN,
+            description=f"Updated loan #{loan.id}",
+            loan_id=loan.id,
+            reader_id=loan.reader_id,
+            library_id=loan.library_id,
+            book_copy_id=loan.book_copy_id,
+            old_data=old_data,
+            new_data=new_data,
+        )
+
+
+        await session.commit()
+        await session.refresh(loan)
+
+
+        # Build response
+        book_copy = await session.get(
+            DimBookCopy,
+            loan.book_copy_id
+        )
+
+        book = await session.get(
+            DimBook,
+            book_copy.book_id
+        )
+
+        reader = await session.get(
+            DimReader,
+            loan.reader_id
+        )
+
+        library = await session.get(
+            DimLibrary,
+            loan.library_id
+        )
+
+        return {
+            "id": loan.id,
+            "status": loan.status,
+            "borrowed_at": loan.borrowed_at,
+            "return_date": loan.return_date,
+            "fine_amount": loan.fine_amount,
+            "reader": {
+                "id": reader.id,
+                "full_name": reader.full_name,
+                "email": reader.email,
+            },
+            "library": {
+                "id": library.id,
+                "name": library.name,
+                "city": library.city,
+            },
+            "book": {
+                "id": book.id,
+                "title": book.title,
+                "isbn": book.isbn,
+                "inventory_code": book_copy.inventory_code,
+            },
+        }
+
+
+    except HTTPException as e:
+
+        await session.rollback()
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.LOAN,
+            description=f"Failed to update loan #{loan_id}",
+            error=e.detail,
+            loan_id=loan_id,
+        )
+
+        await session.commit()
+
+        raise
+
+
+    except Exception as e:
+
+        await session.rollback()
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.LOAN,
+            description=f"Failed to update loan #{loan_id}",
+            error=str(e),
+            loan_id=loan_id,
+        )
+
+        await session.commit()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update loan: {str(e)}"
+        )
 
 
 # Delete loan
@@ -291,7 +456,6 @@ async def delete_loan(
     loan_id: int,
     payload: dict
 ):
-
     # 1. Get loan and check librarian access
     loan = await _get_accessible_loan(
         session,
@@ -299,8 +463,33 @@ async def delete_loan(
         loan_id
     )
 
+    # Save old data
+    old_data = {
+        "id": loan.id,
+        "book_copy_id": loan.book_copy_id,
+        "reader_id": loan.reader_id,
+        "library_id": loan.library_id,
+        "status": loan.status,
+        "borrowed_at": loan.borrowed_at,
+        "return_date": loan.return_date,
+        "fine_amount": loan.fine_amount,
+    }
+
     # 2. Check status
     if loan.status != LoanStatus.RETURNED:
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LOAN,
+            description=f"Failed to delete loan #{loan.id}",
+            error="Only returned loans can be deleted",
+            loan_id=loan.id,
+            status=loan.status,
+        )
+
+        await session.commit()
 
         raise HTTPException(
             status_code=409,
@@ -310,13 +499,39 @@ async def delete_loan(
     # 3. Check fine
     if loan.fine_amount > 0:
 
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LOAN,
+            description=f"Failed to delete loan #{loan.id}",
+            error="Loan has unpaid fine",
+            loan_id=loan.id,
+            fine_amount=loan.fine_amount,
+        )
+
+        await session.commit()
+
         raise HTTPException(
             status_code=409,
             detail="Loan with fine cannot be deleted"
         )
 
-    # 4. Delete
+    # Delete loan
     await session.delete(loan)
+    await session.flush()
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.DELETE,
+        entity_type=EntityType.LOAN,
+        description=f"Deleted loan #{loan.id}",
+        loan_id=loan.id,
+        old_data=old_data,
+    )
+
     await session.commit()
 
     return {
