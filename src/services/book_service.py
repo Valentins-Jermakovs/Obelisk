@@ -30,12 +30,20 @@ from models import (
     BookImage,
     DimBookCopy,
     BookPosition,
-    FactLoan
+    FactLoan,
+    DimShelf,
+    DimLibrary,
+    LoanStatus,
+    AuditAction, 
+    EntityType
 )
-from models import DimShelf, DimLibrary
-from models import LoanStatus
 # Schemas:
 from schemas.book import BookCreate, BookUpdate
+# Services:
+from services.audit_service import (
+    write_audit_log, 
+    write_failed_audit_log
+)
 
 
 # ===================================================
@@ -70,28 +78,94 @@ async def create_book(
         await _link_languages(session, book.id, data.languages)
 
         # 6. Images (optional)
-        if hasattr(data, "images"):
+        if data.images:
             await _create_images(session, book.id, data.images)
 
         # 7. Copies + positions (optional but usually important)
-        if hasattr(data, "copies"):
+        if data.copies:
             await _create_copies(session, book.id, data.copies, payload)
 
-        # 7. Commit everything
+        
+        # Flush to get all generated IDs
+        await session.flush()
+
+
+        # Success audit
+        if payload:
+
+            # Write audit
+            await write_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.CREATE,
+                entity_type=EntityType.BOOK,
+                description=f"Created book '{book.title}'",
+                book_id=book.id,
+                title=book.title,
+                isbn=book.isbn,
+                publication_year=book.publication_year,
+                authors=data.authors,
+                genres=data.genres,
+                languages=data.languages,
+                images_count=len(data.images),
+                copies_count=len(data.copies),
+            )
+        
+        # Commit everything
         await session.commit()
+
         await session.refresh(book)
 
         return book
 
 
     # Rollback everything on error
-    except HTTPException:
+    except HTTPException as e:
+
         await session.rollback()
+
+        if payload:
+
+            # Write failed audit
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.CREATE,
+                entity_type=EntityType.BOOK,
+                description="Failed to create book",
+                error=str(e.detail),
+                title=data.title,
+                isbn=data.isbn,
+            )
+
+            # Commit log
+            await session.commit()
+
         raise
 
     # Unexpected error on creation
     except Exception as e:
+
         await session.rollback()
+
+        if payload:
+
+            # Write failed audit
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.CREATE,
+                entity_type=EntityType.BOOK,
+                description="Failed to create book",
+                error=str(e),
+                title=data.title,
+                isbn=data.isbn,
+            )
+
+            # Commit log
+            await session.commit()
+
+        # Unexpected error on creation
         raise HTTPException(
             status_code=500,
             detail=f"Unexpected error while creating book: {str(e)}"
@@ -110,7 +184,34 @@ async def update_book(
         book = await session.get(DimBook, book_id)
 
         if not book:
-            raise HTTPException(404, "Book not found")
+
+            # Write failed audit
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.UPDATE,
+                entity_type=EntityType.BOOK,
+                description=f"Failed to update book with id {book_id}",
+                error="Book not found",
+                book_id=book_id,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Raise exception
+            raise HTTPException(
+                status_code=404,
+                detail="Book not found"
+            )
+        
+        # Save old data
+        old_data = {
+            "title": book.title,
+            "isbn": book.isbn,
+            "annotation": book.annotation,
+            "publication_year": book.publication_year,
+        }
 
         # Access validation
         if payload and "admin" not in payload.get("roles", []):
@@ -199,7 +300,31 @@ async def update_book(
 
             await _create_copies(session, book_id, data.copies, payload)
 
-        # 7. Commit
+
+        await session.flush()
+
+
+        # New data
+        new_data = {
+            "title": book.title,
+            "isbn": book.isbn,
+            "annotation": book.annotation,
+            "publication_year": book.publication_year,
+        }
+
+        # Success audit
+        await write_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.BOOK,
+            description=f"Updated book '{book.title}'",
+            book_id=book.id,
+            old_data=old_data,
+            new_data=new_data,
+        )
+
+        # Commit everything
         await session.commit()
         await session.refresh(book)
 
@@ -212,7 +337,21 @@ async def update_book(
 
     # Unexpected error handling
     except Exception as e:
+
         await session.rollback()
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.BOOK,
+            description=f"Failed to update book with id {book_id}",
+            error=str(e),
+            book_id=book_id,
+        )
+
+        await session.commit()
+
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update book: {str(e)}"
@@ -231,7 +370,35 @@ async def delete_book(
         book = await session.get(DimBook, book_id)
 
         if not book:
-            raise HTTPException(404, "Book not found")
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.DELETE,
+                entity_type=EntityType.BOOK,
+                description=f"Failed to delete book with id {book_id}",
+                error="Book not found",
+                book_id=book_id,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Raise 404 error
+            raise HTTPException(
+                status_code=404, 
+                detail="Book not found"
+            )
+
+        # Save old data
+        old_data = {
+            "id": book.id,
+            "title": book.title,
+            "isbn": book.isbn,
+            "annotation": book.annotation,
+            "publication_year": book.publication_year,
+        }
 
         # Access validation
         if payload and "admin" not in payload.get("roles", []):
@@ -245,8 +412,26 @@ async def delete_book(
                 .distinct()
             )).all()
             library_ids = [row[0] if isinstance(row, tuple) else row for row in library_rows]
+
+
             # If book not assigned to any library, only administrator can delete it
             if not library_ids:
+
+                # Write failed audit log
+                await write_failed_audit_log(
+                    session=session,
+                    payload=payload,
+                    action=AuditAction.DELETE,
+                    entity_type=EntityType.BOOK,
+                    description=f"Failed to delete book '{book.title}'",
+                    error="Book has no library assignment",
+                    book_id=book.id,
+                )
+
+                # Commit log
+                await session.commit()
+
+                # Return error response
                 raise HTTPException(
                     status_code=403,
                     detail="Book has no library assignment and cannot be deleted by a librarian"
@@ -270,6 +455,23 @@ async def delete_book(
 
         # Warning mode: if there are active loans, we can't delete the book
         if active_loans and not force:
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.DELETE,
+                entity_type=EntityType.BOOK,
+                description=f"Failed to delete book '{book.title}'",
+                error="Book has active loans",
+                book_id=book.id,
+                force=force,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Return warning
             return {
                 "warning": "Book has active loans",
                 "message": "Set force=true to delete anyway",
@@ -282,7 +484,27 @@ async def delete_book(
             select(DimBookCopy).where(DimBookCopy.book_id == book_id)
         )).all()
 
+        copy_count = len(copies)
+
+
         if copies and not force:
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.DELETE,
+                entity_type=EntityType.BOOK,
+                description=f"Failed to delete book '{book.title}'",
+                error="Book has physical copies",
+                book_id=book.id,
+                copies_count=copy_count,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Return warning
             return {
                 "warning": "Book has physical copies",
                 "copies_count": len(copies),
@@ -344,6 +566,24 @@ async def delete_book(
         # 5. DELETE BOOK ITSELF
         await session.delete(book)
 
+        await session.flush()
+
+        # Success audit
+        await write_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.BOOK,
+            description=f"Deleted book '{book.title}'",
+            book_id=book_id,
+            title=book.title,
+            isbn=book.isbn,
+            deleted_copies=copy_count,
+            force=force,
+            old_data=old_data,
+        )
+
+
         await session.commit()
 
         return {
@@ -358,7 +598,24 @@ async def delete_book(
 
     # Unexpected error occurred during the transaction
     except Exception as e:
+
         await session.rollback()
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.BOOK,
+            description=f"Failed to delete book with id {book_id}",
+            error=str(e),
+            book_id=book_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise an HTTPException with a 500 status code and the error message
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete book: {str(e)}"

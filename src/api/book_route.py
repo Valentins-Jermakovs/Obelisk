@@ -55,8 +55,16 @@ async def create_book_route(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):
-    book_obj = await create_book(session, book, payload)
-    return await get_book(session, book_obj.id)
+    book_obj = await create_book(
+        session=session, 
+        data=book, 
+        payload=payload
+    )
+
+    return await get_book(
+        session=session, 
+        book_id=book_obj.id
+    )
 
 
 # Search books - search books by title or author name
@@ -94,7 +102,10 @@ async def get_book_route(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
 ):
-    return await get_book(session, book_id)
+    return await get_book(
+        session=session, 
+        book_id=book_id
+    )
 
 
 # Update book - update a book object with meta data
@@ -117,7 +128,11 @@ async def update_book_route(
         data=book,
         payload=payload
     )
-    return await get_book(session, book_id)
+
+    return await get_book(
+        session=session, 
+        book_id=book_id
+    )
 
 
 # Delete book - delete a book object with meta data
