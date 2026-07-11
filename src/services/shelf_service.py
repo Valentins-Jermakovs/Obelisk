@@ -10,11 +10,17 @@ from models import (
     DimShelf,
     LibrarianLibrary, 
     DimLibrarian, 
-    BookPosition
+    BookPosition,
+    AuditAction, 
+    EntityType
 )
 # Utils:
 from utils.token_utils import validate_token
-
+# Services:
+from services.audit_service import (
+    write_audit_log, 
+    write_failed_audit_log
+)
 
 
 # ===================================================
@@ -149,6 +155,24 @@ async def create_shelf(
     ).first()
 
     if existing:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.SHELF,
+            description=f"Failed to create shelf '{code}'",
+            error="Shelf already exists",
+            shelf_code=code,
+            library_id=library_id,
+            librarian_id=librarian.id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise HTTP exception
         raise HTTPException(
             status_code=409,
             detail=f"Shelf '{code}' already exists in this library"
@@ -163,6 +187,26 @@ async def create_shelf(
 
     # Save
     session.add(shelf)
+
+    # Flush to get ID
+    await session.flush()
+
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.CREATE,
+        entity_type=EntityType.SHELF,
+        description=f"Created shelf '{shelf.code}'",
+        shelf_id=shelf.id,
+        library_id=shelf.library_id,
+        code=shelf.code,
+        section=shelf.section,
+        librarian_id=librarian.id,
+    )
+
+    # Commit everything
     await session.commit()
     await session.refresh(shelf)
 
@@ -181,6 +225,22 @@ async def update_shelf(
     shelf = await session.get(DimShelf, shelf_id)
 
     if not shelf:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.SHELF,
+            description=f"Failed to update shelf with id {shelf_id}",
+            error="Shelf not found",
+            shelf_id=shelf_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise exception
         raise HTTPException(
             status_code=404,
             detail="Shelf not found"
@@ -188,10 +248,20 @@ async def update_shelf(
 
     # Check librarian access
     librarian = await get_current_librarian(session, payload)
+    # Check librarian access
     await check_library_access(session, librarian.id, shelf.library_id)
+
+    # Save old data
+    old_data = {
+        "id": shelf.id,
+        "library_id": shelf.library_id,
+        "code": shelf.code,
+        "section": shelf.section,
+    }
 
     # Update code
     if code is not None:
+
         code = code.strip().upper()
 
         existing = (
@@ -205,6 +275,23 @@ async def update_shelf(
         ).first()
 
         if existing:
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.UPDATE,
+                entity_type=EntityType.SHELF,
+                description=f"Failed to update shelf '{shelf.code}'",
+                error="Shelf already exists",
+                shelf_id=shelf.id,
+                new_code=code,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Return error response
             raise HTTPException(
                 status_code=409,
                 detail=f"Shelf '{code}' already exists in this library"
@@ -215,6 +302,32 @@ async def update_shelf(
     # Update section
     if section is not None:
         shelf.section = section.strip().title()
+
+    # Flush changes
+    await session.flush()
+
+
+    # Save new data
+    new_data = {
+        "id": shelf.id,
+        "library_id": shelf.library_id,
+        "code": shelf.code,
+        "section": shelf.section,
+    }
+
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.UPDATE,
+        entity_type=EntityType.SHELF,
+        description=f"Updated shelf '{shelf.code}'",
+        shelf_id=shelf.id,
+        old_data=old_data,
+        new_data=new_data,
+        librarian_id=librarian.id,
+    )
 
     await session.commit()
     await session.refresh(shelf)
@@ -233,28 +346,100 @@ async def delete_shelf(
     shelf = await session.get(DimShelf, shelf_id)
 
     if not shelf:
-        raise HTTPException(404, "Shelf not found")
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.SHELF,
+            description=f"Failed to delete shelf with id {shelf_id}",
+            error="Shelf not found",
+            shelf_id=shelf_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise exception
+        raise HTTPException(
+            status_code=404, 
+            detail="Shelf not found"
+        )
 
     # Get current librarian and check library access
     librarian = await get_current_librarian(session, payload)
+    # Check library access
     await check_library_access(session, librarian.id, shelf.library_id)
 
     # Check linked positions
-    linked = (await session.exec(
+    positions = (await session.exec(
         select(BookPosition).where(
             BookPosition.shelf_id == shelf_id
         )
-    )).first()
+    )).all()
 
-    # If there are no linked positions, proceed with deletion
-    if linked and not force:
+
+    # Block deletion without force
+    if positions and not force:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.SHELF,
+            description=f"Failed to delete shelf '{shelf.code}'",
+            error="Shelf has books assigned",
+            shelf_id=shelf.id,
+            library_id=shelf.library_id,
+            code=shelf.code,
+            section=shelf.section,
+            linked_positions=len(positions),
+            force=force,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Return failed response
         raise HTTPException(
             status_code=409,
             detail="Shelf has books assigned. Use force=true to delete."
         )
 
+    # Save old data
+    old_data = {
+        "id": shelf.id,
+        "library_id": shelf.library_id,
+        "code": shelf.code,
+        "section": shelf.section,
+        "deleted_positions": len(positions),
+    }
+
     # Delete the shelf
     await session.delete(shelf)
+
+    # Flush changes
+    await session.flush()
+
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.DELETE,
+        entity_type=EntityType.SHELF,
+        description=f"Deleted shelf '{old_data['code']}'",
+        shelf_id=shelf_id,
+        old_data=old_data,
+        force=force,
+        deleted_positions=len(positions),
+        librarian_id=librarian.id,
+    )
+
     await session.commit()
 
-    return {"status": "deleted"}
+    return {
+        "status": "deleted"
+    }

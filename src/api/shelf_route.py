@@ -117,8 +117,8 @@ async def delete(
     payload: dict = Depends(validate_token)
 ):
     return await delete_shelf(
-        session,
-        shelf_id,
-        force,
-        payload
+        session=session,
+        shelf_id=shelf_id,
+        force=force,
+        payload=payload
     )
