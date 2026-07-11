@@ -15,6 +15,7 @@ from sqlmodel import Field, SQLModel
 # Entity types
 class EntityType(str, Enum):
     BOOK = "book"
+    BOOK_COPY = "book_copy"
     READER = "reader"
     AUTHOR = "author"
     GENRE = "genre"
