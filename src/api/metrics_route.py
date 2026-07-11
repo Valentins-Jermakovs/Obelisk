@@ -14,7 +14,7 @@ from schemas.metrics import SystemMetrics
 # Utils:
 from utils.token_utils import admin_required
 # Services:
-from services.audit_service import export_audit_logs
+from services.audit_service import export_audit_logs, get_audit_logs
 # Models:
 from models import AuditAction, EntityType
 
@@ -46,6 +46,67 @@ async def metrics(
         memory_used_mb=round(psutil.virtual_memory().used / 1024 / 1024),
     )
 
+@router.get(
+    "/audit",
+    summary="Get audit logs with filters and pagination. Admin required"
+)
+async def get_audit_logs_route(
+    query: str | None = Query(
+        default=None,
+        description="Search in description and metadata"
+    ),
+
+    user_id: int | None = Query(
+        default=None,
+        description="Filter by user ID"
+    ),
+
+    action: AuditAction | None = Query(
+        default=None,
+        description="Filter by action"
+    ),
+
+    entity_type: EntityType | None = Query(
+        default=None,
+        description="Filter by entity type"
+    ),
+
+    success: bool | None = Query(
+        default=None,
+        description="Filter by operation status"
+    ),
+
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of records per page"
+    ),
+
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Pagination offset"
+    ),
+
+    session: AsyncSession = Depends(get_db),
+
+    payload: dict = Depends(admin_required)
+):
+
+    # Get audit logs
+    logs = await get_audit_logs(
+        session=session,
+        query=query,
+        user_id=user_id,
+        action=action,
+        entity_type=entity_type,
+        success=success,
+        limit=limit,
+        offset=offset,
+    )
+
+    return logs
 
 @router.get("/export")
 async def export_audit_route(
