@@ -56,7 +56,8 @@ async def create(
 ):
     return await create_reader(
         session=session, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -98,7 +99,8 @@ async def update(
     return await update_reader(
         session=session,
         reader_id=reader_id,
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -116,5 +118,6 @@ async def delete(
 ):
     return await delete_reader(
         session=session,
-        reader_id=reader_id
+        reader_id=reader_id,
+        payload=payload
     )

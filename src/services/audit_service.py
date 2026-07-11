@@ -5,8 +5,9 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 import csv
 import os
-from datetime import datetime
 from sqlmodel import select
+from datetime import date, datetime
+from enum import Enum
 # Models:
 from models import AuditLog, AuditAction, EntityType
 
@@ -32,7 +33,7 @@ async def write_audit_log(
             entity_type=entity_type,
             description=description,
             success=success,
-            meta=meta,
+            meta=serialize_audit_data(meta)
         )
     )
 
@@ -59,6 +60,27 @@ async def write_failed_audit_log(
     )
 
 
+def serialize_audit_data(value):
+
+    if isinstance(value, dict):
+        return {
+            k: serialize_audit_data(v)
+            for k, v in value.items()
+        }
+
+    if isinstance(value, (list, tuple, set)):
+        return [
+            serialize_audit_data(v)
+            for v in value
+        ]
+
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+
+    if isinstance(value, Enum):
+        return value.value
+
+    return value
 
 # Export audit logs to CSV
 async def export_audit_logs(
