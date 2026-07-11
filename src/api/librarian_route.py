@@ -56,7 +56,8 @@ async def create(
 ):
     return await create_librarian(
         session=session, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 
@@ -76,7 +77,8 @@ async def update(
     return await update_librarian(
         session=session, 
         librarian_id=librarian_id, 
-        data_in=data
+        data_in=data,
+        payload=payload
     )
 
 # Link library with librarian
@@ -95,7 +97,8 @@ async def link_library(
     return await add_librarian_to_library(
         session=session, 
         librarian_id=librarian_id, 
-        library_id=library_id
+        library_id=library_id,
+        payload=payload
     )
 
 
@@ -137,7 +140,8 @@ async def unlink_library(
     return await remove_librarian_from_library(
         session=session, 
         librarian_id=librarian_id, 
-        library_id=library_id
+        library_id=library_id,
+        payload=payload
     )
 
 
@@ -157,5 +161,6 @@ async def delete(
     return await delete_librarian(
         session=session, 
         librarian_id=librarian_id,
-        force=force
+        force=force,
+        payload=payload
     )

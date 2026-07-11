@@ -7,12 +7,26 @@ from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
 # Models:
-from models import DimLibrarian, DimLibrary, LibrarianLibrary
+from models import (
+    DimLibrarian, 
+    DimLibrary, 
+    LibrarianLibrary,
+    AuditAction, 
+    EntityType
+)
 # Schemas:
 from schemas.librarian import LibrarianCreate, LibrarianUpdate
 # Utils:
-from utils.formatters import format_full_name, format_library, format_librarian
-
+from utils.formatters import (
+    format_full_name, 
+    format_library, 
+    format_librarian
+)
+# Services:
+from services.audit_service import (
+    write_audit_log, 
+    write_failed_audit_log
+)
 
 
 # ===================================================
@@ -23,7 +37,8 @@ from utils.formatters import format_full_name, format_library, format_librarian
 # Create librarian
 async def create_librarian(
     session: AsyncSession, 
-    data_in: LibrarianCreate
+    data_in: LibrarianCreate,
+    payload: dict
 ):
     # Normalize the name of the LIBRARIAN to UPPERCASE and STRIP whitespace
     email = data_in.email.strip().lower()
@@ -31,8 +46,25 @@ async def create_librarian(
     # Validate the email format
     email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
     if not re.match(email_regex, email):
+
+        # Write audit log for failed librarian creation
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARIAN,
+            description="Failed to create librarian",
+            error="Invalid email",
+            full_name=format_full_name(data_in.full_name),
+            email=email,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise an error
         raise HTTPException(
-            status_code=409, 
+            status_code=400, 
             detail="Invalid email"
         )
 
@@ -41,6 +73,23 @@ async def create_librarian(
         select(DimLibrarian).where(DimLibrarian.email == email)
     )
     if result.first():
+
+        # Write audit log for failed librarian creation
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARIAN,
+            description="Failed to create librarian",
+            error="Librarian already exists",
+            full_name=format_full_name(data_in.full_name),
+            email=email,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise an error
         raise HTTPException(
             status_code=409, 
             detail="Librarian already exists"
@@ -54,9 +103,29 @@ async def create_librarian(
 
     # Write the new LIBRARIAN to the database
     session.add(librarian)
+
+    # Flush to get generated ID
+    await session.flush()
+
+    # Audit success
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.CREATE,
+        entity_type=EntityType.LIBRARIAN,
+        description=f"Created librarian '{librarian.full_name}'",
+        librarian_id=librarian.id,
+        full_name=librarian.full_name,
+        email=librarian.email,
+    )
+
+    # Commit everything
     await session.commit()
+
+    # Refresh object
     await session.refresh(librarian)
 
+    # Return data
     return format_librarian(librarian)
 
 
@@ -64,18 +133,41 @@ async def create_librarian(
 async def update_librarian(
     session: AsyncSession, 
     librarian_id: int, 
-    data_in: LibrarianUpdate
+    data_in: LibrarianUpdate,
+    payload: dict
 ):
     # Get the librarian by ID
     librarian = await session.get(DimLibrarian, librarian_id)
 
     if not librarian:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.UPDATE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to update librarian with id {librarian_id}",
+            error="Librarian not found",
+            librarian_id=librarian_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise an error
         raise HTTPException(
             status_code=404, 
             detail="Librarian not found"
         )
 
-    # Translate the data to a dictionary
+    # Save old data
+    old_data = {
+        "full_name": librarian.full_name,
+        "email": librarian.email,
+    }
+
+    # Request data
     data = data_in.model_dump(exclude_unset=True)
 
     # Email update
@@ -84,9 +176,27 @@ async def update_librarian(
 
         # Validate the email format
         email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
+
         if not re.match(email_regex, email):
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.UPDATE,
+                entity_type=EntityType.LIBRARIAN,
+                description=f"Failed to update librarian '{librarian.full_name}'",
+                error="Invalid email",
+                librarian_id=librarian.id,
+                email=email,
+            )
+
+            # Raise an error
+            await session.commit()
+
+            # Raise an error
             raise HTTPException(
-                status_code=409, 
+                status_code=400, 
                 detail="Invalid email"
             )
 
@@ -97,7 +207,26 @@ async def update_librarian(
                 DimLibrarian.id != librarian_id
             )
         )
+
+        # If there is a duplicate email, raise an error
         if result.first():
+
+            # Write failed audit log
+            await write_failed_audit_log(
+                session=session,
+                payload=payload,
+                action=AuditAction.UPDATE,
+                entity_type=EntityType.LIBRARIAN,
+                description=f"Failed to update librarian '{librarian.full_name}'",
+                error="Email already in use",
+                librarian_id=librarian.id,
+                email=email,
+            )
+
+            # Commit log
+            await session.commit()
+
+            # Raise an error
             raise HTTPException(
                 status_code=409, 
                 detail="Email already in use"
@@ -105,38 +234,101 @@ async def update_librarian(
 
         librarian.email = email
 
-    # Name update
+    # Update name
     if "full_name" in data:
         librarian.full_name = format_full_name(data["full_name"])
 
+    # Flush changes
+    await session.flush()
 
-    # Update the librarian in the database
+    # Save new data
+    new_data = {
+        "full_name": librarian.full_name,
+        "email": librarian.email,
+    }
+
+    # Audit success
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.UPDATE,
+        entity_type=EntityType.LIBRARIAN,
+        description=f"Updated librarian '{librarian.full_name}'",
+        librarian_id=librarian.id,
+        old_data=old_data,
+        new_data=new_data,
+    )
+
+    # Commit everything    
     await session.commit()
+
+    # Refresh object
     await session.refresh(librarian)
 
+    # Return data
     return format_librarian(librarian)
 
 
 # Assign librarian to library
 async def add_librarian_to_library(
-    session, 
+    session: AsyncSession, 
     librarian_id: int, 
-    library_id: int
+    library_id: int,
+    payload: dict
 ):
 
-    # Check for librarian and library existence
-    if not await session.get(DimLibrarian, librarian_id):
+    # Check librarian
+    librarian = await session.get(DimLibrarian, librarian_id)
+
+    if not librarian:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to assign librarian {librarian_id} to library {library_id}",
+            error="Librarian not found",
+            librarian_id=librarian_id,
+            library_id=library_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Return error response
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Librarian not found"
         )
 
-    # Check for librarian and library existence
-    if not await session.get(DimLibrary, library_id):
+    # Check library
+    library = await session.get(DimLibrary, library_id)
+
+    if not library:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to assign librarian '{librarian.full_name}' to library {library_id}",
+            error="Library not found",
+            librarian_id=librarian.id,
+            library_id=library_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Return error response
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Library not found"
         )
+
 
     # Check if the librarian is already assigned to the library
     result = await session.exec(
@@ -145,8 +337,32 @@ async def add_librarian_to_library(
             LibrarianLibrary.library_id == library_id
         )
     )
+    
     if result.first():
-        return {"message": "already linked"}
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.CREATE,
+            entity_type=EntityType.LIBRARIAN,
+            description=(
+                f"Failed to assign librarian '{librarian.full_name}' "
+                f"to library '{library.name.title()}'"
+            ),
+            error="Relationship already exists",
+            librarian_id=librarian.id,
+            library_id=library.id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Return error response
+        raise HTTPException(
+            status_code=409,
+            detail="Librarian is already assigned to this library"
+        )
 
     # Create a new librarian library relationship
     session.add(LibrarianLibrary(
@@ -154,9 +370,31 @@ async def add_librarian_to_library(
         library_id=library_id
     ))
 
+    # Flush the session to ensure that the relationship is saved
+    await session.flush()
+
+    # Audit success
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.CREATE,
+        entity_type=EntityType.LIBRARIAN,
+        description=(
+            f"Assigned librarian '{librarian.full_name}' "
+            f"to library '{library.name.title()}'"
+        ),
+        librarian_id=librarian.id,
+        library_id=library.id,
+        librarian_name=librarian.full_name,
+        library_name=library.name.title(),
+    )
+
     # Commit the changes to the database
     await session.commit()
-    return {"status": "linked"}
+
+    return {
+        "status": "linked"
+    }
 
 
 # Search librarians with libraries
@@ -241,8 +479,14 @@ async def search_librarians_with_libraries(
 async def remove_librarian_from_library(
     session: AsyncSession, 
     librarian_id: int, 
-    library_id: int
+    library_id: int,
+    payload: dict
 ):
+    
+    # Get librarian and library (for audit)
+    librarian = await session.get(DimLibrarian, librarian_id)
+    library = await session.get(DimLibrary, library_id)
+
     # Get the link between librarian and library
     result = await session.exec(
         select(LibrarianLibrary).where(
@@ -252,26 +496,69 @@ async def remove_librarian_from_library(
     )
     link = result.first()
 
-    # If the link exists, remove it
+    # Check existence
     if not link:
+
+        # Write failed audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to remove librarian {librarian_id} from library {library_id}",
+            error="Relationship not found",
+            librarian_id=librarian_id,
+            library_id=library_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise exception
         raise HTTPException(
-            status_code=404, 
+            status_code=404,
             detail="Link not found"
         )
 
+    # Save data for audit
+    librarian_name = librarian.full_name if librarian else None
+    library_name = library.name.title() if library else None
+
     # Remove the link
     await session.delete(link)
+
+    await session.flush()
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.DELETE,
+        entity_type=EntityType.LIBRARIAN,
+        description=(
+            f"Removed librarian '{librarian_name}' "
+            f"from library '{library_name}'"
+        ),
+        librarian_id=librarian_id,
+        library_id=library_id,
+        librarian_name=librarian_name,
+        library_name=library_name,
+    )
+
+
     await session.commit()
 
-    return {"status": "unlinked"}
+    return {
+        "status": "unlinked"
+    }
 
 
-# Delete a librarian with all its links
 # Delete librarian with all links
 async def delete_librarian(
     session: AsyncSession,
     librarian_id: int,
-    force: bool = False,
+    payload: dict,
+    force: bool = False
 ):
     # Check if librarian exists
     librarian = await session.get(
@@ -280,6 +567,22 @@ async def delete_librarian(
     )
 
     if not librarian:
+
+        # Write error audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to delete librarian with id {librarian_id}",
+            error="Librarian not found",
+            librarian_id=librarian_id,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Raise exception
         raise HTTPException(
             status_code=404,
             detail="Librarian not found"
@@ -298,8 +601,27 @@ async def delete_librarian(
     libraries_count = libraries_count.one()
 
 
-    # If librarian has linked libraries
+    # Block deletion if linked libraries exist
     if libraries_count > 0 and not force:
+
+        # Write error audit log
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.LIBRARIAN,
+            description=f"Failed to delete librarian '{librarian.full_name}'",
+            error="Librarian has linked libraries",
+            librarian_id=librarian.id,
+            librarian_name=librarian.full_name,
+            linked_libraries=libraries_count,
+            force=force,
+        )
+
+        # Commit log
+        await session.commit()
+
+        # Return error response
         raise HTTPException(
             status_code=409,
             detail=(
@@ -310,8 +632,33 @@ async def delete_librarian(
         )
 
 
+    # Save old data
+    old_data = {
+        "id": librarian.id,
+        "full_name": librarian.full_name,
+        "email": librarian.email,
+    }
+
     # Delete librarian
     await session.delete(librarian)
+
+    await session.flush()
+
+    # Success audit
+    await write_audit_log(
+        session=session,
+        payload=payload,
+        action=AuditAction.DELETE,
+        entity_type=EntityType.LIBRARIAN,
+        description=f"Deleted librarian '{librarian.full_name}'",
+        librarian_id=librarian.id,
+        librarian_name=librarian.full_name,
+        old_data=old_data,
+        force=force,
+        removed_libraries_links=libraries_count,
+    )
+    
+    # Commit changes
     await session.commit()
 
     return {
