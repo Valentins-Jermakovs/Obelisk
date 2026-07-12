@@ -47,8 +47,6 @@ SECRET_KEY=replace-this-with-a-secure-secret
 ALGORITHM=HS256
 ```
 
-If you run the app with Docker Compose, the database credentials and URL are already configured in compose.yaml.
-
 ## Running with Docker Compose
 
 From the project root:
