@@ -175,10 +175,24 @@ async def get_audit_logs(
     }
 
 
+def _resolve_user_id(payload: dict | None) -> int:
+    if not payload:
+        return 0
+
+    raw_user_id = payload.get("sub") or payload.get("user_id")
+    if raw_user_id is None:
+        return 0
+
+    try:
+        return int(raw_user_id)
+    except (TypeError, ValueError):
+        return 0
+
+
 # Write audit log
 async def write_audit_log(
     session: AsyncSession,
-    payload: dict,
+    payload: dict | None,
     action: AuditAction,
     description: str,
     entity_type: EntityType | None = None,
@@ -187,7 +201,7 @@ async def write_audit_log(
 ):
     session.add(
         AuditLog(
-            user_id=int(payload["sub"]),
+            user_id=_resolve_user_id(payload),
             action=action,
             entity_type=entity_type,
             description=description,

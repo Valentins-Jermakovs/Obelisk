@@ -19,14 +19,73 @@ from sqlmodel import SQLModel
 
 from models import (
     DimAuthor, DimGenre, DimLanguage, DimLibrary, DimShelf,
-    DimLibrarian, LibrarianLibrary, DimBook, DimBookCopy, BookPosition
+    DimLibrarian, LibrarianLibrary, DimBook, DimBookCopy, BookPosition,
+    DimPublisher
 )
 
-from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate
+from schemas.book import BookCreate, BookCopyCreate, BookPositionCreate, BookUpdate
 from services.book_service import (
     create_book, search_books, get_book, update_book, delete_book
 )
 from services.library_service import delete_library
+
+@pytest.mark.asyncio
+async def test_book_supports_publisher_and_pages_and_search_by_publisher():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        author = DimAuthor(name='Publisher Author')
+        genre = DimGenre(name='Publisher Genre')
+        language = DimLanguage(code='en', name='English')
+        library = DimLibrary(name='Publisher Library', city='City', address='Addr')
+        publisher = DimPublisher(name='Example Publisher', country='US')
+
+        session.add_all([author, genre, language, library, publisher])
+        await session.commit()
+        await session.refresh(author)
+        await session.refresh(genre)
+        await session.refresh(language)
+        await session.refresh(library)
+        await session.refresh(publisher)
+
+        shelf = DimShelf(library_id=library.id, code='P-01')
+        session.add(shelf)
+        await session.commit()
+        await session.refresh(shelf)
+
+        book = await create_book(
+            session,
+            BookCreate(
+                title='Publisher Search Book',
+                isbn='ISBN-PUBLISHER-1',
+                annotation='Publisher search test',
+                publication_year=2024,
+                pages=320,
+                publisher_id=publisher.id,
+                authors=[author.id],
+                genres=[genre.id],
+                languages=[language.id],
+                images=[],
+                copies=[]
+            )
+        )
+
+        assert book.publisher_id == publisher.id
+        assert book.pages == 320
+
+        searched = await search_books(session, query='Example Publisher', limit=10, offset=0)
+        assert searched['total'] >= 1
+        assert any(item['title'] == 'Publisher Search Book' for item in searched['items'])
+
+        updated = await update_book(
+            session,
+            book.id,
+            BookUpdate(pages=400)
+        )
+        assert updated.pages == 400
+
 
 @pytest.mark.asyncio
 async def test_book_crud_flow():

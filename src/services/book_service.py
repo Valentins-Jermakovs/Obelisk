@@ -33,6 +33,7 @@ from models import (
     FactLoan,
     DimShelf,
     DimLibrary,
+    DimPublisher,
     LoanStatus,
     AuditAction, 
     EntityType
@@ -64,6 +65,8 @@ async def create_book(
         await _validate_existing_ids(session, DimAuthor, data.authors, "Author")
         await _validate_existing_ids(session, DimGenre, data.genres, "Genre")
         await _validate_existing_ids(session, DimLanguage, data.languages, "Language")
+        if data.publisher_id is not None:
+            await _validate_existing_ids(session, DimPublisher, [data.publisher_id], "Publisher")
 
         # 3. Validate copies early so the book is not created if copy validation fails
         if hasattr(data, "copies"):
@@ -107,6 +110,8 @@ async def create_book(
                 authors=data.authors,
                 genres=data.genres,
                 languages=data.languages,
+                publisher_id=data.publisher_id,
+                pages=data.pages,
                 images_count=len(data.images),
                 copies_count=len(data.copies),
             )
@@ -211,6 +216,8 @@ async def update_book(
             "isbn": book.isbn,
             "annotation": book.annotation,
             "publication_year": book.publication_year,
+            "publisher_id": book.publisher_id,
+            "pages": book.pages,
         }
 
         # Access validation
@@ -222,7 +229,10 @@ async def update_book(
             await _check_isbn_unique(session, data.isbn.strip())
 
         # 3. Basic fields update
-        for field in ["title", "isbn", "annotation", "publication_year"]:
+        if data.publisher_id is not None:
+            await _validate_existing_ids(session, DimPublisher, [data.publisher_id], "Publisher")
+
+        for field in ["title", "isbn", "annotation", "publication_year", "publisher_id", "pages"]:
             value = getattr(data, field, None)
             if value is not None:
                 setattr(book, field, value.strip() if isinstance(value, str) else value)
@@ -310,6 +320,8 @@ async def update_book(
             "isbn": book.isbn,
             "annotation": book.annotation,
             "publication_year": book.publication_year,
+            "publisher_id": book.publisher_id,
+            "pages": book.pages,
         }
 
         # Success audit
@@ -646,6 +658,12 @@ async def search_books(
                         DimBook.isbn.ilike(f"%{q}%"),
                         DimBook.annotation.ilike(f"%{q}%"),
 
+                        DimBook.publisher_id.in_(
+                            select(DimPublisher.id).where(
+                                DimPublisher.name.ilike(f"%{q}%")
+                            )
+                        ),
+
                         # Author join
                         DimBook.id.in_(
                             select(BookAuthor.book_id).join(DimAuthor).where(
@@ -778,12 +796,21 @@ async def search_books(
                     })
 
             # Aggregate per book
+            publisher = None
+            if book.publisher_id is not None:
+                publisher_row = await session.get(DimPublisher, book.publisher_id)
+                if publisher_row is not None:
+                    publisher = {"id": publisher_row.id, "name": publisher_row.name}
+
             results.append({
                 "id": book.id,
                 "title": book.title,
                 "isbn": book.isbn,
                 "annotation": book.annotation,
                 "publication_year": book.publication_year,
+                "publisher_id": book.publisher_id,
+                "pages": book.pages,
+                "publisher": publisher,
 
                 "availability": {
                     "status": status,
@@ -969,12 +996,21 @@ async def get_book(
                     "active_loans": v["active_loans"]
                 })
 
+        publisher = None
+        if book.publisher_id is not None:
+            publisher_row = await session.get(DimPublisher, book.publisher_id)
+            if publisher_row is not None:
+                publisher = {"id": publisher_row.id, "name": publisher_row.name}
+
         return {
             "id": book.id,
             "title": book.title,
             "isbn": book.isbn,
             "annotation": book.annotation,
             "publication_year": book.publication_year,
+            "publisher_id": book.publisher_id,
+            "pages": book.pages,
+            "publisher": publisher,
 
             "authors": [
                 {"id": a.id, "name": a.name}

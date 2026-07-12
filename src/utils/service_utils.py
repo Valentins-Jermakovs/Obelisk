@@ -19,7 +19,8 @@ from models import (
     LibrarianLibrary,
     FactLoan,
     LoanStatus,
-    DimReader
+    DimReader,
+    DimPublisher
 )
 
 # ===================================================
@@ -167,7 +168,9 @@ async def _create_book(
         title=data.title.strip(),
         isbn=data.isbn.strip(),
         annotation=data.annotation,
-        publication_year=data.publication_year
+        publication_year=data.publication_year,
+        publisher_id=data.publisher_id,
+        pages=data.pages
     )
 
     # Add the new book to the database

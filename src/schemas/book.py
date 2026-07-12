@@ -48,6 +48,8 @@ class BookCreate(BaseModel):
 
     annotation: Optional[str] = Field(default=None)
     publication_year: int = Field(ge=0, le=2100)
+    publisher_id: Optional[int] = None
+    pages: Optional[int] = Field(default=None, ge=1)
 
     # relations (allow empty lists safely)
     authors: List[int] = Field(default_factory=list)
@@ -69,6 +71,8 @@ class BookUpdate(BaseModel):
 
     annotation: Optional[str] = None
     publication_year: Optional[int] = Field(default=None, ge=0, le=2100)
+    publisher_id: Optional[int] = None
+    pages: Optional[int] = Field(default=None, ge=1)
 
     # relations
     authors: Optional[List[int]] = None
@@ -78,6 +82,13 @@ class BookUpdate(BaseModel):
     # full replace strategy (проще и безопаснее)
     images: Optional[List[BookImageCreate]] = None
     copies: Optional[List[BookCopyCreate]] = None
+
+
+# Publisher short schema
+class PublisherShort(BaseModel):
+
+    id: int
+    name: str
 
 
 # Author short schema
@@ -154,6 +165,9 @@ class BookRead(BaseModel):
     isbn: str
     annotation: Optional[str]
     publication_year: int
+    publisher_id: Optional[int] = None
+    pages: Optional[int] = None
+    publisher: Optional[PublisherShort] = None
 
     authors: List[AuthorShort]
     genres: List[GenreShort]
@@ -198,6 +212,9 @@ class BookSearchItem(BaseModel):
     isbn: str
     annotation: Optional[str]
     publication_year: int
+    publisher_id: Optional[int] = None
+    pages: Optional[int] = None
+    publisher: Optional[PublisherShort] = None
 
     availability: BookAvailability
     libraries: List[LibraryAvailability] = []

@@ -301,7 +301,7 @@ async def update_library(
 async def delete_library(
     session: AsyncSession,
     library_id: int,
-    payload: dict,
+    payload: dict | None = None,
     force: bool = False
 ):
     # Check if the library exists
@@ -441,6 +441,10 @@ async def delete_library(
             )
             await session.exec(
                 BookImage.__table__.delete().where(BookImage.book_id == book.id)
+            )
+
+            await session.exec(
+                select(DimBook).where(DimBook.id == book.id)
             )
 
             await session.delete(book)
