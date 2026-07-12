@@ -1,8 +1,14 @@
 Table dim_author {
   id int [pk, increment]
-  name varchar [not null]
+  name varchar [unique, not null]
   country varchar
   birth_year int
+}
+
+Table dim_publisher {
+  id int [pk, increment]
+  name varchar [unique, not null]
+  country varchar
 }
 
 Table dim_book {
@@ -11,6 +17,8 @@ Table dim_book {
   isbn varchar [unique, not null]
   annotation text
   publication_year int [not null]
+  pages int
+  publisher_id int
 }
 
 Table dim_genre {
@@ -42,7 +50,7 @@ Table book_authors {
 Table dim_book_copy {
   id int [pk, increment]
   book_id int [not null]
-  inventory_code varchar [unique, not null]
+  inventory_code varchar [not null]
   condition varchar [not null, default: 'good']
 }
 
@@ -56,7 +64,9 @@ Table dim_library {
 Table dim_reader {
   id int [pk, increment]
   full_name varchar [not null]
-  email varchar [not null]
+  email varchar [unique, not null]
+  phone varchar
+  birth_date date
   registered_at timestamp [not null]
 }
 
@@ -111,32 +121,34 @@ Table audit_logs {
   user_id int [not null]
   action varchar [not null]
   entity_type varchar
+  description varchar [not null]
   success boolean [default: true]
   meta json
   created_at timestamp [not null]
 }
 
-Ref: book_authors.book_id > dim_book.id
-Ref: book_authors.author_id > dim_author.id
+Ref: book_authors.book_id > dim_book.id [delete: cascade]
+Ref: book_authors.author_id > dim_author.id [delete: cascade]
 
-Ref: book_genres.book_id > dim_book.id
-Ref: book_genres.genre_id > dim_genre.id
+Ref: book_genres.book_id > dim_book.id [delete: cascade]
+Ref: book_genres.genre_id > dim_genre.id [delete: cascade]
 
-Ref: book_languages.book_id > dim_book.id
-Ref: book_languages.language_id > dim_language.id
+Ref: book_languages.book_id > dim_book.id [delete: cascade]
+Ref: book_languages.language_id > dim_language.id [delete: cascade]
 
-Ref: dim_book_copy.book_id > dim_book.id
+Ref: dim_book.publisher_id > dim_publisher.id [delete: set null]
+Ref: dim_book_copy.book_id > dim_book.id [delete: cascade]
 
-Ref: dim_shelf.library_id > dim_library.id
+Ref: dim_shelf.library_id > dim_library.id [delete: cascade]
 
-Ref: book_position.book_copy_id > dim_book_copy.id
-Ref: book_position.shelf_id > dim_shelf.id
+Ref: book_position.book_copy_id > dim_book_copy.id [delete: cascade]
+Ref: book_position.shelf_id > dim_shelf.id [delete: cascade]
 
-Ref: book_images.book_id > dim_book.id
+Ref: book_images.book_id > dim_book.id [delete: cascade]
 
-Ref: fact_loans.book_copy_id > dim_book_copy.id
-Ref: fact_loans.reader_id > dim_reader.id
-Ref: fact_loans.library_id > dim_library.id
+Ref: fact_loans.book_copy_id > dim_book_copy.id [delete: cascade]
+Ref: fact_loans.reader_id > dim_reader.id [delete: cascade]
+Ref: fact_loans.library_id > dim_library.id [delete: cascade]
 
-Ref: librarian_library.librarian_id > dim_librarian.id
-Ref: librarian_library.library_id > dim_library.id
+Ref: librarian_library.librarian_id > dim_librarian.id [delete: cascade]
+Ref: librarian_library.library_id > dim_library.id [delete: cascade]
