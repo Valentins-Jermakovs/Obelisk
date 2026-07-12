@@ -4,6 +4,7 @@
 # Libraries:
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import ForeignKey, Column
 # Models:
 from .book_authors import BookAuthor
 from .book_genres import BookGenre
@@ -36,6 +37,7 @@ class DimBook(SQLModel, table=True):
     isbn: str = Field(index=True, unique=True)
     annotation: str | None = Field(default=None)
     publication_year: int
+    pages: int | None = Field(default=None, ge=1)
 
 
     # Relationships
@@ -55,4 +57,11 @@ class DimBook(SQLModel, table=True):
     languages: list["DimLanguage"] = Relationship(
         back_populates="books", 
         link_model=BookLanguage
+    )
+
+    # Foreign key to DimPublisher table
+    publisher_id: int | None = Field(
+        sa_column=Column(
+            ForeignKey("dim_publisher.id", ondelete="SET NULL"),
+        )
     )

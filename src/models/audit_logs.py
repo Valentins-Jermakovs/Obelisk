@@ -24,6 +24,7 @@ class EntityType(str, Enum):
     LIBRARIAN = "librarian"
     SHELF = "shelf"
     LOAN = "loan"
+    PUBLISHER = "publisher"
 
 
 # Audit actions

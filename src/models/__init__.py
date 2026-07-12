@@ -11,6 +11,7 @@ from .dim_shelf import DimShelf
 from .dim_book_copy import DimBookCopy, BookCondition
 from .dim_genre import DimGenre
 from .dim_language import DimLanguage
+from .dim_publisher import DimPublisher
 # BOOK IMAGES
 from .book_image import BookImage, BookImageType
 # FACT LAYER

@@ -15,6 +15,7 @@ from .shelf_route import router as shelf_router
 from .book_route import router as book_router
 from .loan_route import router as loan_router
 from .book_copy_route import router as book_copy_router
+from .publisher_route import router as publisher_router
 
 # This will be the main router object
 main_router = APIRouter()
@@ -35,3 +36,4 @@ main_router.include_router(shelf_router)
 main_router.include_router(book_router)
 main_router.include_router(loan_router)
 main_router.include_router(book_copy_router)
+main_router.include_router(publisher_router)
