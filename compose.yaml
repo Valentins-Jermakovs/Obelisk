@@ -26,7 +26,6 @@ services:
       - "8001:8001"
     env_file:
       - .env
-      - src/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://librarian:LibPass_2026@postgres:5432/library_catalog
 
