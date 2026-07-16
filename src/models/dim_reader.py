@@ -23,7 +23,7 @@ class DimReader(SQLModel, table=True):
     )
     
 
-    # User data
+    # User data:
     # Username
     full_name: str = Field(
         index=True, 

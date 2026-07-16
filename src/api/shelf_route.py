@@ -62,7 +62,7 @@ async def create(
 @router.get(
     "/search", 
     response_model=ShelfSearchResponse,
-    summary="Search shelves in library by libray ID and other parameters, roles not required"
+    summary="Search shelves in library by library ID and other parameters, roles not required"
 )
 async def search(
     library_id: int,

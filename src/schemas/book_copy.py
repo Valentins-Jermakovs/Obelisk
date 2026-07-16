@@ -12,15 +12,18 @@ from models import BookCondition
 # Book copy create schema
 class BookCopyCreate(BaseModel):
 
+    # FK data:
     book_id: int
     library_id: int
     shelf_id: int
 
+    # Inventory code:
     inventory_code: str = Field(
         min_length=1,
         max_length=50
     )
 
+    # Book condition and position:
     condition: BookCondition = BookCondition.GOOD
     row: int | None = None
     column: int | None = None
@@ -30,12 +33,14 @@ class BookCopyCreate(BaseModel):
 # Book copy update schema
 class BookCopyUpdate(BaseModel):
 
+    # Inventory code:
     inventory_code: str | None = Field(
         default=None,
         min_length=1,
         max_length=50
     )
 
+    # Book condition and position:
     condition: BookCondition | None = None
     shelf_id: int | None = None
     row: int | None = None

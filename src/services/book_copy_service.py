@@ -327,7 +327,7 @@ async def update_book_copy(
     )
 
 
-    # Target position values
+    # Target position values:
     target_shelf_id = update_data.get(
         "shelf_id",
         position.shelf_id
@@ -384,8 +384,11 @@ async def update_book_copy(
             )
 
 
+
+            # Check inventory code existing
             if not inventory_code:
 
+                # Write failed log
                 await write_failed_audit_log(
                     session=session,
                     payload=payload,
@@ -396,14 +399,17 @@ async def update_book_copy(
                     copy_id=copy.id,
                 )
 
+                # Save log
                 await session.commit()
 
+                # Raise exception
                 raise HTTPException(
                     status_code=422,
                     detail="Inventory code cannot be empty"
                 )
 
 
+            # Check if inventory code is unique
             existing = (
                 await session.exec(
                     select(DimBookCopy).where(
@@ -414,8 +420,10 @@ async def update_book_copy(
             ).first()
 
 
+            # If existing, write failed log and raise exception
             if existing:
 
+                # Write failed log
                 await write_failed_audit_log(
                     session=session,
                     payload=payload,
@@ -427,14 +435,16 @@ async def update_book_copy(
                     inventory_code=inventory_code,
                 )
 
+                # Save log
                 await session.commit()
 
+                # Raise exception
                 raise HTTPException(
                     status_code=409,
                     detail="Inventory code already exists"
                 )
 
-
+            # Update inventory code
             copy.inventory_code = inventory_code
 
 
@@ -458,9 +468,10 @@ async def update_book_copy(
             update_data["shelf_id"]
         )
 
-
+        # Check if shelf exists
         if not shelf:
 
+            # Write failed audit log
             await write_failed_audit_log(
                 session=session,
                 payload=payload,
@@ -472,16 +483,20 @@ async def update_book_copy(
                 shelf_id=update_data["shelf_id"],
             )
 
+            # Save log
             await session.commit()
 
+            # Raise exception
             raise HTTPException(
                 status_code=404,
                 detail="Shelf not found"
             )
 
 
+        # Check if user has permission
         if shelf.library_id != library_id:
 
+            # Write failed audit log
             await write_failed_audit_log(
                 session=session,
                 payload=payload,
@@ -493,14 +508,17 @@ async def update_book_copy(
                 shelf_id=shelf.id,
             )
 
+            # Save log
             await session.commit()
 
+            # Raise exception
             raise HTTPException(
                 status_code=409,
                 detail="Shelf belongs to another library"
             )
 
 
+        # Update book copy - shelf
         position.shelf_id = shelf.id
 
 

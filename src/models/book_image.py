@@ -14,6 +14,7 @@ from sqlalchemy import Column, ForeignKey
 
 # Image type enum
 class BookImageType(str, Enum):
+    
     COVER = "cover"
     BACK = "back"
     SPINE = "spine"

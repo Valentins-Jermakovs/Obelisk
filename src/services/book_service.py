@@ -232,6 +232,7 @@ async def update_book(
         if data.publisher_id is not None:
             await _validate_existing_ids(session, DimPublisher, [data.publisher_id], "Publisher")
 
+        # Update fields in cycle
         for field in ["title", "isbn", "annotation", "publication_year", "publisher_id", "pages"]:
             value = getattr(data, field, None)
             if value is not None:

@@ -158,29 +158,10 @@ async def create_loan(
             },
         }
 
-    except HTTPException as e:
-
-        await session.rollback()
-
-        await write_failed_audit_log(
-            session=session,
-            payload=payload,
-            action=AuditAction.CREATE,
-            entity_type=EntityType.LOAN,
-            description="Failed to create loan",
-            error=e.detail,
-            reader_id=data.reader_id,
-            library_id=data.library_id,
-            book_copy_id=data.book_copy_id,
-        )
-
-        await session.commit()
-
-        raise
-
     except Exception as e:
-
         await session.rollback()
+
+        error = e.detail if isinstance(e, HTTPException) else str(e)
 
         await write_failed_audit_log(
             session=session,
@@ -188,17 +169,20 @@ async def create_loan(
             action=AuditAction.CREATE,
             entity_type=EntityType.LOAN,
             description="Failed to create loan",
-            error=str(e),
+            error=error,
             reader_id=data.reader_id,
             library_id=data.library_id,
             book_copy_id=data.book_copy_id,
         )
 
         await session.commit()
+
+        if isinstance(e, HTTPException):
+            raise
 
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create loan: {str(e)}"
+            detail=f"Failed to create loan: {error}"
         )
 
 
@@ -409,27 +393,7 @@ async def update_loan(
         }
 
 
-    except HTTPException as e:
-
-        await session.rollback()
-
-        await write_failed_audit_log(
-            session=session,
-            payload=payload,
-            action=AuditAction.UPDATE,
-            entity_type=EntityType.LOAN,
-            description=f"Failed to update loan #{loan_id}",
-            error=e.detail,
-            loan_id=loan_id,
-        )
-
-        await session.commit()
-
-        raise
-
-
     except Exception as e:
-
         await session.rollback()
 
         await write_failed_audit_log(
@@ -438,15 +402,18 @@ async def update_loan(
             action=AuditAction.UPDATE,
             entity_type=EntityType.LOAN,
             description=f"Failed to update loan #{loan_id}",
-            error=str(e),
+            error=e.detail if isinstance(e, HTTPException) else str(e),
             loan_id=loan_id,
         )
 
         await session.commit()
+
+        if isinstance(e, HTTPException):
+            raise
 
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to update loan: {str(e)}"
+            detail="Failed to update loan"
         )
 
 

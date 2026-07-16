@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # Dependencies:
 from config.db_dependency import get_db
 # Utils:
-from utils.token_utils import admin_required, validate_token
+from utils.token_utils import admin_required, admin_or_librarian_required
 # Schemas:
 from schemas.publisher import (
     PublisherCreate,
@@ -61,10 +61,11 @@ async def create_publisher_route(
 
 
 # Search publishers
+# Admin or librarian role required
 @router.get(
     "/search",
     response_model=PublisherListResponse,
-    summary="Search publishers with pagination"
+    summary="Search publishers with pagination, Admin or librarian  role required",
 )
 async def search_publishers_route(
     query: str | None = Query(
@@ -91,7 +92,7 @@ async def search_publishers_route(
     ),
 
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(validate_token)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
 
     result = await search_publishers(
@@ -106,15 +107,16 @@ async def search_publishers_route(
 
 
 # Get publisher by ID
+# Librarian or admin role required
 @router.get(
     "/{publisher_id}",
     response_model=PublisherRead,
-    summary="Get publisher by ID"
+    summary="Get publisher by ID, librarian or admin role required"
 )
 async def get_publisher_route(
     publisher_id: int,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(validate_token)
+    payload: dict = Depends(admin_or_librarian_required)
 ):
 
     publisher = await get_publisher(
@@ -154,7 +156,7 @@ async def update_publisher_route(
 @router.delete(
     "/{publisher_id}",
     response_model=PublisherDeleteResponse,
-    summary="Delete publisher, Admin role required"
+    summary="Delete publisher, set force=True, to delete all related data, Admin role required"
 )
 async def delete_publisher_route(
     publisher_id: int,

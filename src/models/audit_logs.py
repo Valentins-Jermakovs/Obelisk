@@ -14,6 +14,7 @@ from sqlmodel import Field, SQLModel
 
 # Entity types
 class EntityType(str, Enum):
+    
     BOOK = "book"
     BOOK_COPY = "book_copy"
     READER = "reader"
@@ -29,13 +30,16 @@ class EntityType(str, Enum):
 
 # Audit actions
 class AuditAction(str, Enum):
+
+    # Audit actions:
+    # Main actions
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
-
+    # Sub actions
     ISSUE = "issue"
     RETURN = "return"
-
+    # Other actions
     OTHER = "other"
 
 
@@ -43,8 +47,10 @@ class AuditAction(str, Enum):
 #                       models
 # =====================================================
 
+# Audit log model
 class AuditLog(SQLModel, table=True):
 
+    # Table name
     __tablename__ = "audit_logs"
 
 

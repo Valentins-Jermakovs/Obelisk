@@ -109,7 +109,7 @@ async def update(
 @router.delete(
     "/{reader_id}",
     response_model=ReaderDeleteResponse,
-    summary="Delete reader by ID, set force=True to delete entities, Admin required"
+    summary="Delete reader by ID, Admin required"
 )
 async def delete(
     reader_id: int,

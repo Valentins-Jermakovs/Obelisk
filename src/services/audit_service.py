@@ -175,14 +175,19 @@ async def get_audit_logs(
     }
 
 
+# Resolve user id - helper function
 def _resolve_user_id(payload: dict | None) -> int:
+
+    # If no payload, return 0
     if not payload:
         return 0
 
+    # If no sub or user id in payload, return 0
     raw_user_id = payload.get("sub") or payload.get("user_id")
     if raw_user_id is None:
         return 0
 
+    # Try to convert raw user id into an integer
     try:
         return int(raw_user_id)
     except (TypeError, ValueError):
@@ -199,6 +204,8 @@ async def write_audit_log(
     success: bool = True,
     **meta,
 ):
+    
+    # Write audit log
     session.add(
         AuditLog(
             user_id=_resolve_user_id(payload),
@@ -221,6 +228,8 @@ async def write_failed_audit_log(
     error: str | None = None,
     **meta,
 ):
+    
+    # Write failed audit log
     await write_audit_log(
         session=session,
         payload=payload,
@@ -233,26 +242,33 @@ async def write_failed_audit_log(
     )
 
 
+# Serialize audit data - used for audit log meta data
+# Helper function for serializing data in JSON
 def serialize_audit_data(value):
 
+    # If the value is a dictionary, serialize it:
     if isinstance(value, dict):
         return {
             k: serialize_audit_data(v)
             for k, v in value.items()
         }
 
+    # If the value is a list or tuple, serialize it:
     if isinstance(value, (list, tuple, set)):
         return [
             serialize_audit_data(v)
             for v in value
         ]
 
+    # If the value is a date or datetime, serialize it:
     if isinstance(value, (date, datetime)):
         return value.isoformat()
 
+    # If the value is an Enum, serialize it:
     if isinstance(value, Enum):
         return value.value
 
+    # Return serialized data
     return value
 
 # Export audit logs to CSV
@@ -270,7 +286,7 @@ async def export_audit_logs(
     statement = select(AuditLog)
 
 
-    # Filters
+    # Filters:
 
     # Filter by user
     if user_id is not None:
@@ -305,8 +321,6 @@ async def export_audit_logs(
         statement = statement.where(
             AuditLog.created_at >= start_date
         )
-
-
     if end_date:
         statement = statement.where(
             AuditLog.created_at <= end_date
@@ -321,7 +335,7 @@ async def export_audit_logs(
 
     # Execute query
     result = await session.exec(statement)
-
+    # Get results
     logs = result.all()
 
 
@@ -334,21 +348,17 @@ async def export_audit_logs(
         exist_ok=True
     )
 
-
-
     # Generate filename
     filename = (
         f"audit_logs_"
         f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     )
 
-
+    # Create file path
     file_path = os.path.join(
         export_dir,
         filename
     )
-
-
 
     # Write CSV
     with open(
@@ -389,7 +399,6 @@ async def export_audit_logs(
                 log.meta,
                 log.created_at,
             ])
-
 
 
     return file_path

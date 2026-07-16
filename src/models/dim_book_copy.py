@@ -14,6 +14,7 @@ from sqlalchemy import Column, ForeignKey
 
 # Condition enum
 class BookCondition(str, Enum):
+    
     NEW = "new"
     GOOD = "good"
     FAIR = "fair"

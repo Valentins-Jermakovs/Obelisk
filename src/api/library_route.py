@@ -91,7 +91,7 @@ async def search_libraries_route(
 async def get_library_route(
     library_id: int,
     session: AsyncSession = Depends(get_db),
-    payload: dict = Depends(admin_required)
+    payload: dict = Depends(validate_token)
 ):
     return await get_library(
         session=session, 

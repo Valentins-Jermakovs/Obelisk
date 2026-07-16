@@ -16,6 +16,7 @@ from sqlalchemy import ForeignKey, Column
 
 # Enum for loan status
 class LoanStatus(str, Enum):
+    
     ACTIVE = "active"
     LOST = "lost"
     RETURNED = "returned"

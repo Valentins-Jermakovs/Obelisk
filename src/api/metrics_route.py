@@ -46,6 +46,9 @@ async def metrics(
         memory_used_mb=round(psutil.virtual_memory().used / 1024 / 1024),
     )
 
+
+# Get audit logs with filters and pagination
+# Administrator required
 @router.get(
     "/audit",
     summary="Get audit logs with filters and pagination. Admin required"
@@ -108,6 +111,9 @@ async def get_audit_logs_route(
 
     return logs
 
+
+# Get audit logs in CSV format
+# Administrator role required
 @router.get("/export")
 async def export_audit_route(
     user_id: int | None = Query(

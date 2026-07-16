@@ -62,7 +62,7 @@ async def create(
 
 
 # Update librarian
-# Everyone can be accessed to this route - Mostly automatically
+# Everyone can be accessed to this route
 @router.patch(
     "/{librarian_id}",
     response_model=LibrarianRead,
