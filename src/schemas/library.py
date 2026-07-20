@@ -54,9 +54,9 @@ class LibraryDeleteWarning(BaseModel):
 # Search response schema
 class LibrarySearchResponse(BaseModel):
 
-    items: list["LibraryRead"]
+    items: list[LibraryRead]
 
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool

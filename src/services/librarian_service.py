@@ -455,6 +455,8 @@ async def search_librarians_with_libraries(
                 libraries[link.library_id]
             )
 
+    has_more = offset + len(librarians) < total
+
     # Final result
     return {
         "items": [
@@ -471,7 +473,7 @@ async def search_librarians_with_libraries(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(librarians)
+        "has_more": has_more
     }
 
 

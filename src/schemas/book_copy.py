@@ -98,4 +98,4 @@ class BookCopySearchResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool

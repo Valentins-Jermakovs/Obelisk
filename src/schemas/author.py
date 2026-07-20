@@ -41,6 +41,15 @@ class AuthorRead(BaseModel):
     class Config:
         from_attributes = True
 
+# Author search response schema
+class AuthorSearchResponse(BaseModel):
+
+    items: list[AuthorRead]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
 
 # Author delete response schema
 class AuthorDeleteResponse(BaseModel):
@@ -54,13 +63,3 @@ class AuthorDeleteWarning(BaseModel):
     warning: str
     books_count: int
     message: str
-
-# Author search response schema
-class AuthorSearchResponse(BaseModel):
-    
-    items: list["AuthorRead"]
-
-    total: int
-    limit: int
-    offset: int
-    returned: int

@@ -823,12 +823,14 @@ async def search_books(
                 "libraries": libraries_list
             })
 
+        has_more = offset + len(results) < total
+
         return {
             "items": results,
             "total": total,
             "limit": limit,
             "offset": offset,
-            "returned": len(results)
+            "has_more": has_more,
         }
 
     # Unexpected error handling

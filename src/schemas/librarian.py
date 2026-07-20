@@ -55,7 +55,7 @@ class LibrarianSearchResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool
 
 
 # Link librarian to library response

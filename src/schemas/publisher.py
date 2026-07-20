@@ -92,8 +92,7 @@ class PublisherListResponse(BaseModel):
     # Current offset
     offset: int
 
-    # Returned records count
-    returned: int
+    has_more: bool
 
 
 # Delete response schema

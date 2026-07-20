@@ -546,12 +546,12 @@ async def search_publishers(
             }
         )
 
-
+    has_more = offset + len(items) < total
 
     return {
         "items": items,
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(items),
+        "has_more": has_more
     }

@@ -633,13 +633,14 @@ async def search_loans(
             }
         )
 
+    has_more = offset + len(items) < total
 
     return {
         "items": items,
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(items)
+        "has_more": has_more
     }
 
 
@@ -730,10 +731,12 @@ async def get_reader_loans(
             }
         )
 
+    has_more = offset + len(items) < total
+
     return {
         "items": items,
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(items)
+        "has_more": has_more
     }

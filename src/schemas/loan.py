@@ -94,7 +94,7 @@ class LoanSearchResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool
 
 
 # Loan delete response schema
@@ -132,7 +132,7 @@ class ReaderLoanSearchResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool
 
 # Loan delete response schema
 class LoanDeleteResponse(BaseModel):

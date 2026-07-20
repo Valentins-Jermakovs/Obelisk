@@ -120,6 +120,7 @@ async def search_genres(
     stmt = base_stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     genres = result.all()
+    has_more = offset + len(genres) < total
 
     return {
         "items": [
@@ -129,7 +130,7 @@ async def search_genres(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(genres)
+        "has_more": has_more,
     }
 
 

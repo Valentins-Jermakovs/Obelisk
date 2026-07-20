@@ -128,6 +128,7 @@ async def search_languages(
     stmt = base_stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     languages = result.all()
+    has_more = offset + len(languages) < total
 
     return {
         "items": [
@@ -141,7 +142,7 @@ async def search_languages(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(languages)
+        "has_more": has_more
     }
 
 

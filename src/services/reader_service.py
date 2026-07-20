@@ -415,6 +415,7 @@ async def search_readers(
     stmt = base_stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     readers = result.all()
+    has_more = offset + len(readers) < total
 
     return {
         "items": [
@@ -431,7 +432,7 @@ async def search_readers(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(readers)
+        "has_more": has_more
     }
 
 

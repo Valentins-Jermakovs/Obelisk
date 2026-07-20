@@ -171,7 +171,7 @@ async def get_audit_logs(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(items),
+        "has_more": offset + len(items) < total,
     }
 
 

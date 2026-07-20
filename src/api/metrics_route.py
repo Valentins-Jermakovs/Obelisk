@@ -10,7 +10,7 @@ from datetime import datetime
 # Dependencies:
 from config.db_dependency import get_db
 # Schemas:
-from schemas.metrics import SystemMetrics
+from schemas.metrics import SystemMetrics, AuditLogsResponse
 # Utils:
 from utils.token_utils import admin_required
 # Services:
@@ -51,6 +51,7 @@ async def metrics(
 # Administrator required
 @router.get(
     "/audit",
+    response_model=AuditLogsResponse,
     summary="Get audit logs with filters and pagination. Admin required"
 )
 async def get_audit_logs_route(

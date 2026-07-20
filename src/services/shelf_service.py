@@ -108,11 +108,14 @@ async def search_shelves(
     total = (await session.exec(total_stmt)).one()
 
     returned = len(items)
+    has_more = offset + len(items) < total
 
     return {
         "items": items,
         "total": total,
-        "returned": returned,
+        "limit": limit,
+        "offset": offset,
+        "has_more": has_more,
         "library_total_shelves": total,
         "library_remaining": max(total - offset - returned, 0)
     }

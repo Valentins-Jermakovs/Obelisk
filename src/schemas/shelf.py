@@ -40,7 +40,9 @@ class ShelfSearchResponse(BaseModel):
     items: list[ShelfRead]
 
     total: int
-    returned: int
+    limit: int
+    offset: int
+    has_more: bool
 
     library_total_shelves: int
     library_remaining: int

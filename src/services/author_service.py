@@ -156,13 +156,15 @@ async def search_authors(
     stmt = stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     authors = result.all()
+    has_more = offset + len(authors) < total
+
 
     return {
         "items": [format_author(a) for a in authors],
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(authors)
+        "has_more": has_more,
     }
 
 

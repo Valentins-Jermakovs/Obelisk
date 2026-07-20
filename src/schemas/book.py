@@ -228,7 +228,7 @@ class BookSearchResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    returned: int
+    has_more: bool
 
 
 # Book delete response schema

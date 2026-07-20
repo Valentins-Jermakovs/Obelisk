@@ -161,13 +161,14 @@ async def search_libraries(
     stmt = stmt.offset(offset).limit(limit)
     result = await session.exec(stmt)
     libraries = result.all()
+    has_more = offset + len(libraries) < total
 
     return {
         "items": [format_library(l) for l in libraries],
         "total": total,
         "limit": limit,
         "offset": offset,
-        "returned": len(libraries)
+        "has_more": has_more,
     }
 
 
