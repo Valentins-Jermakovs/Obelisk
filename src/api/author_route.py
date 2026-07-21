@@ -1,12 +1,15 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from typing import Union
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
 from schemas.author import (
     AuthorCreate,
@@ -16,6 +19,7 @@ from schemas.author import (
     AuthorDeleteWarning,
     AuthorSearchResponse
 )
+
 # Services:
 from services.author_service import (
     create_author,
@@ -23,6 +27,7 @@ from services.author_service import (
     update_author,
     delete_author
 )
+
 # Utils:
 from utils.token_utils import (
     admin_required, 
@@ -38,9 +43,9 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create author - create a new author
 # Return id, name, city, birth_year
@@ -54,12 +59,14 @@ async def create_author_route(
     author: AuthorCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> AuthorRead:
+    
     return await create_author(
         session=session, 
         author_data=author,
         payload=payload
     )
+
 
 
 # Search author - search for authors by name or country, birth_year
@@ -76,13 +83,15 @@ async def search_authors_route(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> AuthorSearchResponse:
+    
     return await search_authors(
         session=session,
         query=q,
         limit=limit,
         offset=offset
     )
+
 
 
 # Update author - update an existing author by id
@@ -98,13 +107,15 @@ async def update_author_route(
     author: AuthorUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> AuthorRead:
+    
     return await update_author(
         session=session,
         author_id=author_id,
         author_data=author,
         payload=payload
     )
+
 
 
 # Delete author - delete an existing author by id
@@ -122,6 +133,7 @@ async def delete_author_route(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
+    
     return await delete_author(
         session=session,
         author_id=author_id,
