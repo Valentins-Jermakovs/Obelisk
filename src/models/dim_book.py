@@ -1,10 +1,12 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from typing import TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import ForeignKey, Column
+
 # Models:
 from .book_authors import BookAuthor
 from .book_genres import BookGenre
@@ -13,7 +15,7 @@ from .book_languages import BookLanguage
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
 # Type checking

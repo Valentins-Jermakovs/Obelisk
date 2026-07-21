@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from enum import Enum
 from sqlmodel import SQLModel, Field
@@ -9,8 +10,10 @@ from sqlalchemy import Column, ForeignKey
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
+
+# ======================Enums==========================
 
 # Image type enum
 class BookImageType(str, Enum):
@@ -22,6 +25,9 @@ class BookImageType(str, Enum):
     DAMAGE = "damage"
     OTHER = "other"
 
+
+
+# ======================Models=========================
 
 # Book image model
 class BookImage(SQLModel, table=True):

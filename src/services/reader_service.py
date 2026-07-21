@@ -1,11 +1,13 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
+
 # Models:
 from models import (
     DimReader, 
@@ -14,10 +16,13 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.reader import ReaderCreate, ReaderUpdate
+from schemas import ReaderCreate, ReaderUpdate
+
 # Utils:
 from utils.formatters import format_full_name
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -26,9 +31,9 @@ from services.audit_service import (
 
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create reader
 async def create_reader(
@@ -38,32 +43,6 @@ async def create_reader(
 ):
     # Normalize email
     email = data_in.email.strip().lower()
-
-    # Validate email
-    email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
-
-    if not re.match(email_regex, email):
-
-        # Write failed audit log
-        await write_failed_audit_log(
-            session=session,
-            payload=payload,
-            action=AuditAction.CREATE,
-            entity_type=EntityType.READER,
-            description="Failed to create reader",
-            error="Invalid email",
-            full_name=format_full_name(data_in.full_name),
-            email=email,
-        )
-
-        # Commit log
-        await session.commit()
-
-        # Raise exception
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid email"
-        )
 
     # Check if the EMAIL already exists
     existing = (
@@ -102,37 +81,7 @@ async def create_reader(
      # Validate phone
     phone_val = None
 
-    if hasattr(data_in, "phone") and data_in.phone:
-
-        phone_pattern = re.compile(
-            r"^\+?[0-9\s\-\(\)]{7,20}$"
-        )
-
-        if not phone_pattern.match(
-            data_in.phone.strip()
-        ):
-
-            # Write failed audit log
-            await write_failed_audit_log(
-                session=session,
-                payload=payload,
-                action=AuditAction.CREATE,
-                entity_type=EntityType.READER,
-                description="Failed to create reader",
-                error="Invalid phone",
-                full_name=format_full_name(data_in.full_name),
-                email=email,
-                phone=data_in.phone,
-            )
-
-            # Commit log
-            await session.commit()
-
-            # Raise exception
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid phone"
-            )
+    if data_in.phone:
 
         phone_val = data_in.phone.strip()
 
@@ -180,6 +129,7 @@ async def create_reader(
         "birth_date": reader.birth_date,
         "registered_at": reader.registered_at
     }
+
 
 
 # Update reader by ID
@@ -231,33 +181,6 @@ async def update_reader(
 
         email = data["email"].strip().lower()
 
-        email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
-
-        # Check if the email is valid
-        if not re.match(email_regex, email):
-
-            # Write failed audit log
-            await write_failed_audit_log(
-                session=session,
-                payload=payload,
-                action=AuditAction.UPDATE,
-                entity_type=EntityType.READER,
-                description=f"Failed to update reader '{reader.full_name}'",
-                error="Invalid email",
-                reader_id=reader.id,
-                email=email,
-            )
-
-            # Commit log
-            await session.commit()
-
-            # Raise exception
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid email"
-            )
-
-
         existing = (
             await session.exec(
                 select(DimReader).where(
@@ -304,37 +227,6 @@ async def update_reader(
     if "phone" in data:
 
         if data["phone"]:
-
-            phone_pattern = re.compile(
-                r"^\+?[0-9\s\-\(\)]{7,20}$"
-            )
-
-            # Check if the phone number is valid
-            if not phone_pattern.match(
-                data["phone"].strip()
-            ):
-
-                # Write audit log
-                await write_failed_audit_log(
-                    session=session,
-                    payload=payload,
-                    action=AuditAction.UPDATE,
-                    entity_type=EntityType.READER,
-                    description=f"Failed to update reader '{reader.full_name}'",
-                    error="Invalid phone",
-                    reader_id=reader.id,
-                    phone=data["phone"],
-                )
-
-                # Commit log
-                await session.commit()
-
-                # Raise exception
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid phone"
-                )
-
 
             reader.phone = data["phone"].strip()
 
@@ -385,6 +277,8 @@ async def update_reader(
         "registered_at": reader.registered_at
     }
 
+
+
 # Search reader by email, full_name
 async def search_readers(
     session: AsyncSession,
@@ -434,6 +328,7 @@ async def search_readers(
         "offset": offset,
         "has_more": has_more
     }
+
 
 
 # Delete reader by ID
@@ -580,7 +475,6 @@ async def delete_reader(
 
     # Commit to DB
     await session.commit()
-
 
     return {
         "status": "deleted"

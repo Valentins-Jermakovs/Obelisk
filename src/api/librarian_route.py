@@ -1,11 +1,14 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Services:
 from services.librarian_service import (
     create_librarian,
@@ -15,8 +18,9 @@ from services.librarian_service import (
     remove_librarian_from_library,
     delete_librarian
 )
+
 # Schemas:
-from schemas.librarian import (
+from schemas import (
     LibrarianCreate,
     LibrarianUpdate,
     LibrarianSearchResponse,
@@ -25,8 +29,12 @@ from schemas.librarian import (
     LibrarianLibraryUnlinkResponse,
     LibrarianDeleteResponse
 )
+
 # Utils:
-from utils.token_utils import admin_required, validate_token
+from utils.token_utils import (
+    admin_required, 
+    validate_token
+)
 
 
 
@@ -37,9 +45,9 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create librarian
 # Return a librarian object
@@ -53,12 +61,15 @@ async def create(
     data: LibrarianCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> LibrarianRead:
+    
+    # Create a new librarian object
     return await create_librarian(
         session=session, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Update librarian
@@ -73,13 +84,17 @@ async def update(
     data: LibrarianUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> LibrarianRead:
+    
+    # Update a new librarian object
     return await update_librarian(
         session=session, 
         librarian_id=librarian_id, 
         data_in=data,
         payload=payload
     )
+
+
 
 # Link library with librarian
 # Administrator role required
@@ -93,13 +108,16 @@ async def link_library(
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibrarianLibraryLinkResponse:
+    
+    # Link library with librarian
     return await add_librarian_to_library(
         session=session, 
         librarian_id=librarian_id, 
         library_id=library_id,
         payload=payload
     )
+
 
 
 # Search librarian by name or email
@@ -115,13 +133,15 @@ async def search(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibrarianSearchResponse:
+    
     return await search_librarians_with_libraries(
         session=session,
         query=query,
         limit=limit,
         offset=offset
     )
+
 
 
 # Unlink library and librarian
@@ -136,13 +156,15 @@ async def unlink_library(
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibrarianLibraryUnlinkResponse:
+    
     return await remove_librarian_from_library(
         session=session, 
         librarian_id=librarian_id, 
         library_id=library_id,
         payload=payload
     )
+
 
 
 # Delete librarian by ID
@@ -157,7 +179,8 @@ async def delete(
     force: bool = False,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibrarianDeleteResponse:
+    
     return await delete_librarian(
         session=session, 
         librarian_id=librarian_id,

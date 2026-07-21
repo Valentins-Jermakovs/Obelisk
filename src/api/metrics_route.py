@@ -1,22 +1,38 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 import psutil
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
-from schemas.metrics import SystemMetrics, AuditLogsResponse
+from schemas.metrics import (
+    SystemMetrics, 
+    AuditLogsResponse
+)
+
 # Utils:
 from utils.token_utils import admin_required
+
 # Services:
-from services.audit_service import export_audit_logs, get_audit_logs
+from services.audit_service import (
+    export_audit_logs, 
+    get_audit_logs
+)
+
 # Models:
-from models import AuditAction, EntityType
+from models import (
+    AuditAction, 
+    EntityType
+)
+
 
 
 # Router object for export
@@ -25,9 +41,11 @@ router = APIRouter(
     tags=["Metrics services and audit logs"],
 )
 
-# ==================================================
-#       routes - metric and audit data
-# ==================================================
+
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Return server metric data
 # Administrator required
@@ -38,13 +56,15 @@ router = APIRouter(
 )
 async def metrics(
     payload: dict = Depends(admin_required)
-):
+) -> SystemMetrics:
+    
     # Return current system metrics
     return SystemMetrics(
         cpu_percent=psutil.cpu_percent(),
         memory_percent=psutil.virtual_memory().percent,
         memory_used_mb=round(psutil.virtual_memory().used / 1024 / 1024),
     )
+
 
 
 # Get audit logs with filters and pagination
@@ -92,11 +112,9 @@ async def get_audit_logs_route(
         ge=0,
         description="Pagination offset"
     ),
-
     session: AsyncSession = Depends(get_db),
-
     payload: dict = Depends(admin_required)
-):
+) -> AuditLogsResponse:
 
     # Get audit logs
     logs = await get_audit_logs(

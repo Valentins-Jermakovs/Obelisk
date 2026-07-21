@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -8,9 +9,12 @@ from sqlalchemy import Column, JSON
 from sqlmodel import Field, SQLModel
 
 
+
 # =====================================================
-#                       enums
+#                       Models
 # =====================================================
+
+# ======================Enums==========================
 
 # Entity types
 class EntityType(str, Enum):
@@ -43,9 +47,8 @@ class AuditAction(str, Enum):
     OTHER = "other"
 
 
-# =====================================================
-#                       models
-# =====================================================
+
+# ======================Models=========================
 
 # Audit log model
 class AuditLog(SQLModel, table=True):

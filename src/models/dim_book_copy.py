@@ -1,16 +1,19 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from sqlmodel import SQLModel, Field
 from enum import Enum
 from sqlalchemy import Column, ForeignKey
 
 
+
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
+# ======================Enums==========================
 
 # Condition enum
 class BookCondition(str, Enum):
@@ -21,6 +24,9 @@ class BookCondition(str, Enum):
     DAMAGED = "damaged"
     LOST = "lost"
 
+
+
+# ======================Models=========================
 
 # Book copy model
 class DimBookCopy(SQLModel, table=True):

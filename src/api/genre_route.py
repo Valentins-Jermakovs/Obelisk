@@ -1,19 +1,23 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas
-from schemas.genre import (
+from schemas import (
     GenreCreate, 
     GenreUpdate, 
     GenreRead, 
     GenreSearchResponse,
     GenreDeleteResponse
 )
+
 # Services
 from services.genre_service import (
     create_genre,
@@ -21,8 +25,12 @@ from services.genre_service import (
     update_genre,
     delete_genre
 )
+
 # Auth
-from utils.token_utils import admin_required, admin_or_librarian_required
+from utils.token_utils import (
+    admin_required, 
+    admin_or_librarian_required
+)
 
 
 
@@ -33,9 +41,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create genre - create a new genre
 # Return a genre object
@@ -49,12 +58,15 @@ async def create(
     data: GenreCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> GenreRead:
+    
+    # Create a new genre object
     return await create_genre(
         session=session, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Search genres - get all genres from the database
@@ -70,13 +82,15 @@ async def search(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> GenreSearchResponse:
+    
     return await search_genres(
         session=session,
         query=query,
         limit=limit,
         offset=offset
     )
+
 
 
 # Update genre - update a genre object
@@ -92,13 +106,15 @@ async def update(
     data: GenreUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> GenreRead:
+    
     return await update_genre(
         session=session, 
         genre_id=genre_id,
         data_in=data,
         payload=payload
     )
+
 
 
 # Delete genre by id
@@ -113,7 +129,8 @@ async def delete(
     force: bool = False,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> GenreDeleteResponse:
+    
     return await delete_genre(
         session=session, 
         genre_id=genre_id, 

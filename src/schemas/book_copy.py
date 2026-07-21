@@ -1,13 +1,20 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
+
+# Models:
 from models import BookCondition
 
-# ===================================================
-#                       schemas
-# ===================================================
+
+
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # Book copy create schema
 class BookCopyCreate(BaseModel):
@@ -30,6 +37,7 @@ class BookCopyCreate(BaseModel):
     depth: int | None = None
 
 
+
 # Book copy update schema
 class BookCopyUpdate(BaseModel):
 
@@ -47,6 +55,9 @@ class BookCopyUpdate(BaseModel):
     column: int | None = None
     depth: int | None = None
 
+
+
+# ===================Response schemas================
 
 # Response after create/update
 class BookCopyRead(BaseModel):

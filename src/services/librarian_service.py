@@ -1,11 +1,13 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import re
+
 # Models:
 from models import (
     DimLibrarian, 
@@ -14,14 +16,17 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.librarian import LibrarianCreate, LibrarianUpdate
+from schemas import LibrarianCreate, LibrarianUpdate
+
 # Utils:
 from utils.formatters import (
     format_full_name, 
     format_library, 
     format_librarian
 )
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -29,10 +34,10 @@ from services.audit_service import (
 )
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
 
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create librarian
 async def create_librarian(
@@ -42,31 +47,6 @@ async def create_librarian(
 ):
     # Normalize the name of the LIBRARIAN to UPPERCASE and STRIP whitespace
     email = data_in.email.strip().lower()
-
-    # Validate the email format
-    email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
-    if not re.match(email_regex, email):
-
-        # Write audit log for failed librarian creation
-        await write_failed_audit_log(
-            session=session,
-            payload=payload,
-            action=AuditAction.CREATE,
-            entity_type=EntityType.LIBRARIAN,
-            description="Failed to create librarian",
-            error="Invalid email",
-            full_name=format_full_name(data_in.full_name),
-            email=email,
-        )
-
-        # Commit log
-        await session.commit()
-
-        # Raise an error
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid email"
-        )
 
     # Try to find an existing LIBRARIAN
     result = await session.exec(
@@ -129,6 +109,7 @@ async def create_librarian(
     return format_librarian(librarian)
 
 
+
 # Update librarian by ID
 async def update_librarian(
     session: AsyncSession, 
@@ -173,32 +154,6 @@ async def update_librarian(
     # Email update
     if "email" in data:
         email = data["email"].strip().lower()
-
-        # Validate the email format
-        email_regex = r"^[\w\.-]+@([\w\-]+\.)+[a-zA-Z]{2,}$"
-
-        if not re.match(email_regex, email):
-
-            # Write failed audit log
-            await write_failed_audit_log(
-                session=session,
-                payload=payload,
-                action=AuditAction.UPDATE,
-                entity_type=EntityType.LIBRARIAN,
-                description=f"Failed to update librarian '{librarian.full_name}'",
-                error="Invalid email",
-                librarian_id=librarian.id,
-                email=email,
-            )
-
-            # Raise an error
-            await session.commit()
-
-            # Raise an error
-            raise HTTPException(
-                status_code=400, 
-                detail="Invalid email"
-            )
 
         # Check for duplicate emails
         result = await session.exec(
@@ -267,6 +222,7 @@ async def update_librarian(
 
     # Return data
     return format_librarian(librarian)
+
 
 
 # Assign librarian to library
@@ -397,6 +353,7 @@ async def add_librarian_to_library(
     }
 
 
+
 # Search librarians with libraries
 async def search_librarians_with_libraries(
     session: AsyncSession,
@@ -477,6 +434,7 @@ async def search_librarians_with_libraries(
     }
 
 
+
 # Remove link between librarian and library
 async def remove_librarian_from_library(
     session: AsyncSession, 
@@ -553,6 +511,7 @@ async def remove_librarian_from_library(
     return {
         "status": "unlinked"
     }
+
 
 
 # Delete librarian with all links

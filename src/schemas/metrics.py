@@ -1,6 +1,7 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -8,17 +9,30 @@ from typing import Any
 
 
 
-# ===================================================
-#                       schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # System metrics response schema
 class SystemMetrics(BaseModel):
 
-    cpu_percent: float = Field(ge=0, le=100)
-    memory_percent: float = Field(ge=0, le=100)
+    cpu_percent: float = Field(
+        ge=0, 
+        le=100
+    )
+
+    memory_percent: float = Field(
+        ge=0, 
+        le=100
+    )
+
     memory_used_mb: int = Field(ge=0)
 
+
+
+# ===================Response schemas================
 
 # Audit log response schema
 class AuditLogResponse(BaseModel):
@@ -31,6 +45,7 @@ class AuditLogResponse(BaseModel):
     success: bool
     meta: dict[str, Any]
     created_at: datetime
+
 
 
 # Audit logs response schema

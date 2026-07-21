@@ -1,10 +1,12 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Helpers:
 from utils.service_utils import (
     _validate_librarian_access_to_library,
@@ -13,8 +15,10 @@ from utils.service_utils import (
     _get_accessible_library_ids,
     _check_position_is_available
 )
+
 # Schemas:
-from schemas.book_copy import BookCopyCreate, BookCopyUpdate
+from schemas import BookCopyCreate, BookCopyUpdate
+
 # Models:
 from models import (
     DimBook,
@@ -26,6 +30,7 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -33,9 +38,10 @@ from services.audit_service import (
 )
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
+
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create physical book copy
 async def create_book_copy(
@@ -222,6 +228,7 @@ async def create_book_copy(
     await session.refresh(copy)
 
     return copy
+
 
 
 # Update physical book copy
@@ -573,6 +580,7 @@ async def update_book_copy(
     return copy
 
 
+
 # Delete physical book copy
 async def delete_book_copy(
     session: AsyncSession,
@@ -746,6 +754,7 @@ async def delete_book_copy(
     }
 
 
+
 # Search physical book copies
 async def search_book_copies(
     session: AsyncSession,
@@ -813,7 +822,6 @@ async def search_book_copies(
         stmt = stmt.where(
             DimShelf.library_id.in_(library_ids)
         )
-
 
 
     # Search

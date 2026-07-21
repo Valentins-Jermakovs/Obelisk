@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from sqlmodel import SQLModel, Field
 from sqlalchemy import ForeignKey, Column
@@ -8,7 +9,7 @@ from sqlalchemy import ForeignKey, Column
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
 # dim_librarian <-> librarian_library <-> dim_library (M2M)

@@ -1,10 +1,12 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from fastapi import HTTPException, Depends
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimShelf,
@@ -14,8 +16,10 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Utils:
 from utils.token_utils import validate_token
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -23,10 +27,10 @@ from services.audit_service import (
 )
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
 
+# =====================================================
+#                     Services
+# =====================================================
 
 # Helper function: Get current librarian
 async def get_current_librarian(
@@ -37,7 +41,10 @@ async def get_current_librarian(
     email = payload.get("email")
 
     if not email:
-        raise HTTPException(401, "Invalid token payload")
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid token payload"
+        )
 
     # Get the current librarian from the database
     librarian = (await session.exec(
@@ -45,9 +52,13 @@ async def get_current_librarian(
     )).first()
 
     if not librarian:
-        raise HTTPException(404, "Librarian not found")
+        raise HTTPException(
+            status_code=404, 
+            detail="Librarian not found"
+        )
 
     return librarian
+
 
 
 # Helper function: Check library access
@@ -70,6 +81,7 @@ async def check_library_access(
             detail="You are not assigned to this library"
         )
     
+
 
 # Search shelf by code, section
 async def search_shelves(
@@ -119,6 +131,8 @@ async def search_shelves(
         "library_total_shelves": total,
         "library_remaining": max(total - offset - returned, 0)
     }
+
+
 
 # Create shelf
 async def create_shelf(
@@ -214,6 +228,7 @@ async def create_shelf(
     await session.refresh(shelf)
 
     return shelf
+
 
 
 # Update shelf by ID
@@ -336,6 +351,7 @@ async def update_shelf(
     await session.refresh(shelf)
 
     return shelf
+
 
 
 # Delete shelf by ID

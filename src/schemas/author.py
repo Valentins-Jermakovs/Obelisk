@@ -1,34 +1,66 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional
 
 
 
+# =====================================================
+#                       Schemas
+# =====================================================
 
-# ===================================================
-#                       schemas
-# ===================================================
+# ===================Request schemas===================
 
 # Author create schema
 class AuthorCreate(BaseModel):
 
     # Author data:
-    name: str = Field(min_length=1, max_length=255)
-    country: Optional[str] = Field(default=None, max_length=100)
-    birth_year: Optional[int] = Field(default=None, ge=0, le=2100)
+    name: str = Field(
+        min_length=1, 
+        max_length=255
+    )
+
+    country: Optional[str] = Field(
+        default=None, 
+        max_length=100
+    )
+
+    birth_year: Optional[int] = Field(
+        default=None, 
+        ge=0, 
+        le=2100
+    )
+
+
 
 
 # Author update schema
 class AuthorUpdate(BaseModel):
 
     # Author data - mostly optional, for update only:
-    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    country: Optional[str] = Field(default=None, max_length=100)
-    birth_year: Optional[int] = Field(default=None, ge=0, le=2100)
+    name: Optional[str] = Field(
+        default=None, 
+        min_length=1, 
+        max_length=255
+    )
 
+    country: Optional[str] = Field(
+        default=None, 
+        max_length=100
+    )
+
+    birth_year: Optional[int] = Field(
+        default=None, 
+        ge=0, 
+        le=2100
+    )
+
+
+
+# ===================Response schemas================
 
 # Author read schema
 class AuthorRead(BaseModel):

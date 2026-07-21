@@ -1,13 +1,14 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from sqlmodel import SQLModel, Field
 from datetime import datetime, date
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
 # Reader model

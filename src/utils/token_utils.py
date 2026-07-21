@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from jose import jwt, JWTError, ExpiredSignatureError
 from fastapi import Depends, HTTPException
@@ -61,6 +62,7 @@ async def validate_token(
         )
 
 
+
 # Administrator access
 async def admin_required(
     payload: dict = Depends(validate_token)
@@ -75,6 +77,7 @@ async def admin_required(
     return payload
 
 
+
 # Librarian access
 async def librarian_required(
     payload: dict = Depends(validate_token)
@@ -87,6 +90,7 @@ async def librarian_required(
         )
 
     return payload
+
 
 
 # Administrator or Librarian

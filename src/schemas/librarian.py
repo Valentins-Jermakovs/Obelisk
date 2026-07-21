@@ -1,27 +1,49 @@
-# ====================================================
-#                       imports
-# ====================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 
 
 
-# ===================================================
-#                      schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # Librarian creation schema
 class LibrarianCreate(BaseModel):
     
-    full_name: str = Field(min_length=1, max_length=255)
-    email: str = Field(min_length=5, max_length=255)
+    # Username:
+    full_name: str = Field(
+        min_length=1, 
+        max_length=255
+    )
+
+    # Email:
+    email: EmailStr = Field(max_length=255)
+
+
 
 # Librarian update schema
 class LibrarianUpdate(BaseModel):
 
-    full_name: Optional[str] = None
-    email: Optional[str] = None
+    # Full name
+    full_name: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=255
+    )
+
+    # Email
+    email: Optional[EmailStr] = None
+
+
+
+# ===================Response schemas================
 
 # Library short schema
 class LibraryShort(BaseModel):
@@ -30,12 +52,15 @@ class LibraryShort(BaseModel):
     name: str
     city: str
 
+
+
 # Librarian read schema
 class LibrarianRead(BaseModel):
 
     id: int
     full_name: str
     email: str
+
 
 
 # Librarian read with libraries schema
@@ -47,6 +72,7 @@ class LibrarianWithLibraries(BaseModel):
     libraries: List[LibraryShort]
 
 
+
 # Librarian search response schema
 class LibrarianSearchResponse(BaseModel):
 
@@ -56,6 +82,7 @@ class LibrarianSearchResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
 
 
 # Link librarian to library response

@@ -1,15 +1,18 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
 
 
 
 
-# ===================================================
-#                       schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # Publisher create schema
 class PublisherCreate(BaseModel):
@@ -22,6 +25,8 @@ class PublisherCreate(BaseModel):
 
     # Publisher country
     country: str | None = None
+
+
 
 # Publisher update schema
 class PublisherUpdate(BaseModel):
@@ -36,6 +41,9 @@ class PublisherUpdate(BaseModel):
     # Publisher country
     country: str | None = None
 
+
+
+# ===================Response schemas================
 
 # Read schema
 class PublisherRead(BaseModel):
@@ -52,6 +60,7 @@ class PublisherRead(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 
 # Search filter schema
@@ -77,22 +86,18 @@ class PublisherSearch(BaseModel):
     )
 
 
+
 # Paginated response schema
 class PublisherListResponse(BaseModel):
 
     # Publisher list
     items: list[PublisherRead]
+    
+    total: int      # Total records count
+    limit: int      # Current limit
+    offset: int     # Current offset
+    has_more: bool  # Has more records
 
-    # Total records count
-    total: int
-
-    # Current limit
-    limit: int
-
-    # Current offset
-    offset: int
-
-    has_more: bool
 
 
 # Delete response schema

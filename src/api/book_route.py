@@ -1,14 +1,17 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from typing import Union
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
-from schemas.book import (
+from schemas import (
     BookCreate,
     BookUpdate,
     BookRead,
@@ -16,6 +19,7 @@ from schemas.book import (
     BookDeleteResponse,
     BookDeleteWarning
 )
+
 # Services:
 from services.book_service import (
     create_book,
@@ -24,11 +28,13 @@ from services.book_service import (
     delete_book,
     get_book
 )
+
 # Utils:
 from utils.token_utils import (
     admin_or_librarian_required,
     validate_token
 )
+
 
 
 # Router object for export
@@ -38,9 +44,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create book - create a new book
 # Return a book object
@@ -54,7 +61,9 @@ async def create_book_route(
     book: BookCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> BookRead:
+    
+    # Create a new book object
     book_obj = await create_book(
         session=session, 
         data=book, 
@@ -65,6 +74,7 @@ async def create_book_route(
         session=session, 
         book_id=book_obj.id
     )
+
 
 
 # Search books - search books by title or author name
@@ -81,13 +91,15 @@ async def search_books_route(
     offset: int = 0,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> BookSearchResponse:
+    
     return await search_books(
         session=session,
         query=q,
         limit=limit,
         offset=offset
     )
+
 
 
 # Get book by ID - get a book object with meta data
@@ -101,11 +113,13 @@ async def get_book_route(
     book_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> BookRead:
+    
     return await get_book(
         session=session, 
         book_id=book_id
     )
+
 
 
 # Update book - update a book object with meta data
@@ -121,7 +135,9 @@ async def update_book_route(
     book: BookUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> BookRead:
+    
+    # Update the book object with meta data
     await update_book(
         session=session,
         book_id=book_id,
@@ -133,6 +149,7 @@ async def update_book_route(
         session=session, 
         book_id=book_id
     )
+
 
 
 # Delete book - delete a book object with meta data
@@ -150,6 +167,7 @@ async def delete_book_route(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
 ):
+    
     return await delete_book(
         session=session,
         book_id=book_id,

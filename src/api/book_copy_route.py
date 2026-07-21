@@ -1,6 +1,7 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import (
     APIRouter,
@@ -8,13 +9,16 @@ from fastapi import (
     Query
 )
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
-from schemas.book_copy import (
+from schemas import (
     BookCopyCreate,
     BookCopyUpdate
 )
+
 # Services:
 from services.book_copy_service import (
     create_book_copy,
@@ -22,16 +26,19 @@ from services.book_copy_service import (
     delete_book_copy,
     search_book_copies
 )
+
 # Utils:
 from utils.token_utils import (
     librarian_required
 )
+
 # Schemas:
 from schemas.book_copy import (
     BookCopyRead,
     BookCopyDeleteResponse,
     BookCopySearchResponse
 )
+
 
 
 # Router object for export
@@ -42,9 +49,9 @@ router = APIRouter(
 
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create physical book copy
 # Return copy data
@@ -58,7 +65,7 @@ async def create_copy(
     data: BookCopyCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> BookCopyRead:
 
     return await create_book_copy(
         session=session,
@@ -81,7 +88,7 @@ async def update_copy(
     data: BookCopyUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> BookCopyRead:
 
     return await update_book_copy(
         session=session,
@@ -104,7 +111,7 @@ async def delete_copy(
     copy_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> BookCopyDeleteResponse:
 
     return await delete_book_copy(
         session=session,
@@ -126,22 +133,11 @@ async def search_copy(
         default=None,
         description="Search by book title, inventory code or shelf code"
     ),
-
-    limit: int = Query(
-        default=10,
-        ge=1,
-        le=100
-    ),
-
-    offset: int = Query(
-        default=0,
-        ge=0
-    ),
-
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-
-):
+) -> BookCopySearchResponse:
 
     return await search_book_copies(
         session=session,

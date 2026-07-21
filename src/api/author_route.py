@@ -11,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from config.db_dependency import get_db
 
 # Schemas:
-from schemas.author import (
+from schemas import (
     AuthorCreate,
     AuthorUpdate,
     AuthorRead,

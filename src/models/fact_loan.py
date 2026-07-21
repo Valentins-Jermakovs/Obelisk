@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraies:
 from sqlmodel import SQLModel, Field
 from datetime import datetime
@@ -11,8 +12,10 @@ from sqlalchemy import ForeignKey, Column
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
+
+# ======================Enums==========================
 
 # Enum for loan status
 class LoanStatus(str, Enum):
@@ -22,6 +25,9 @@ class LoanStatus(str, Enum):
     RETURNED = "returned"
     OVERDUE = "overdue"
 
+
+
+# ======================Models=========================
 
 # Loan model
 class FactLoan(SQLModel, table=True):
@@ -57,6 +63,7 @@ class FactLoan(SQLModel, table=True):
             index=True
         )
     )
+
 
     # Other attributes
     # Loan status

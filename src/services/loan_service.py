@@ -1,11 +1,13 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException
 from datetime import datetime, timezone
 from sqlmodel import select, or_, func
+
 # Helper functions
 from utils.service_utils import (
     _validate_librarian_access_to_library,
@@ -18,11 +20,13 @@ from utils.service_utils import (
     _get_accessible_library_ids,
     _get_reader_from_payload
 )
+
 # Schemas
-from schemas.loan import (
+from schemas import (
     LoanCreate,
     LoanUpdate
 )
+
 # Models:
 from models import (
     LoanStatus, 
@@ -34,6 +38,7 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -41,10 +46,10 @@ from services.audit_service import (
 )
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
 
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create loan service
 async def create_loan(
@@ -184,7 +189,6 @@ async def create_loan(
             status_code=500,
             detail=f"Failed to create loan: {error}"
         )
-
 
 
 
@@ -417,6 +421,7 @@ async def update_loan(
         )
 
 
+
 # Delete loan
 async def delete_loan(
     session: AsyncSession,
@@ -505,6 +510,7 @@ async def delete_loan(
         "status": "deleted",
         "loan_id": loan_id
     }
+
 
 
 # Search loan for librarian by reader, book, library
@@ -642,6 +648,7 @@ async def search_loans(
         "offset": offset,
         "has_more": has_more
     }
+
 
 
 # Search loans for reader

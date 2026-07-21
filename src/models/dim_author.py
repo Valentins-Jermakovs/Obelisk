@@ -1,16 +1,18 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from typing import TYPE_CHECKING, Optional
 from sqlmodel import SQLModel, Field, Relationship
+
 # Models:
 from .book_authors import BookAuthor
 
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
 # Type checking

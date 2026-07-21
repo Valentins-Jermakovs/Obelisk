@@ -1,10 +1,12 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, or_, func
+
 # Helper functions:
 from utils.service_utils import (
     _check_isbn_unique,
@@ -18,6 +20,7 @@ from utils.service_utils import (
     _validate_copies,
     _validate_librarian_access_to_book
 )
+
 # Models:
 from models import (
     DimAuthor,
@@ -38,8 +41,10 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.book import BookCreate, BookUpdate
+from schemas import BookCreate, BookUpdate
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -47,9 +52,10 @@ from services.audit_service import (
 )
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
+
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create book service
 async def create_book(
@@ -176,6 +182,7 @@ async def create_book(
             detail=f"Unexpected error while creating book: {str(e)}"
         )
     
+
 
 # Update book service
 async def update_book(
@@ -370,6 +377,7 @@ async def update_book(
             detail=f"Failed to update book: {str(e)}"
         )
     
+
 
 # Delete book service
 async def delete_book(
@@ -635,6 +643,7 @@ async def delete_book(
         )
     
 
+
 # Search service
 async def search_books(
     session: AsyncSession,
@@ -839,6 +848,7 @@ async def search_books(
             status_code=500,
             detail=f"Search failed: {str(e)}"
         )
+    
     
 
 # Get book by id service

@@ -1,10 +1,12 @@
-# ==================================================
-#                       imports
-# ==================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, func, or_
 from fastapi import HTTPException
+
 # Models:
 from models import (
     DimPublisher,
@@ -12,20 +14,21 @@ from models import (
     AuditAction,
     DimBook
 )
+
 # Audit:
 from services.audit_service import (
     write_audit_log,
     write_failed_audit_log,
 )
+
 # Schemas:
-from schemas.publisher import PublisherUpdate
+from schemas import PublisherUpdate
 
 
 
-# ==================================================
-#                  Publisher services
-# ==================================================
-
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create publisher
 async def create_publisher(
@@ -140,6 +143,8 @@ async def create_publisher(
     return publisher
 
 
+
+# Update publisher
 async def update_publisher(
     session: AsyncSession,
     publisher_id: int,
@@ -301,6 +306,8 @@ async def update_publisher(
     return publisher
 
 
+
+# Delete publisher
 async def delete_publisher(
     session: AsyncSession,
     publisher_id: int,
@@ -423,6 +430,7 @@ async def delete_publisher(
     }
 
 
+
 # Get publisher by ID
 async def get_publisher(
     session: AsyncSession,
@@ -445,7 +453,6 @@ async def get_publisher(
 
 
     return publisher
-
 
 
 

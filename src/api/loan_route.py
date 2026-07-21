@@ -1,11 +1,14 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Services
 from services.loan_service import (
     create_loan,
@@ -14,8 +17,9 @@ from services.loan_service import (
     search_loans,
     get_reader_loans
 )
+
 # Schemas
-from schemas.loan import (
+from schemas import (
     LoanCreate,
     LoanUpdate,
     LoanRead,
@@ -23,8 +27,13 @@ from schemas.loan import (
     ReaderLoanSearchResponse,
     LoanDeleteResponse
 )
+
 # Utils:
-from utils.token_utils import librarian_required, validate_token
+from utils.token_utils import (
+    librarian_required, 
+    validate_token
+)
+
 
 
 # Router object for export
@@ -34,9 +43,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create a loan
 # Librarian role required
@@ -49,13 +59,15 @@ async def create(
     data: LoanCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> LoanRead:
 
+    # Create a new loan object
     return await create_loan(
         session=session,
         data=data,
         payload=payload
     )
+
 
 
 # Update loan by ID
@@ -70,14 +82,16 @@ async def update(
     data: LoanUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> LoanRead:
 
+    # Update a loan object
     return await update_loan(
         session=session,
         loan_id=loan_id,
         data=data,
         payload=payload
     )
+
 
 
 # Delete loan by ID
@@ -91,13 +105,14 @@ async def delete(
     loan_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> LoanDeleteResponse:
 
     return await delete_loan(
         session=session,
         loan_id=loan_id,
         payload=payload
     )
+
 
 
 # Search loan by reader name or book title
@@ -108,22 +123,12 @@ async def delete(
     summary="Search a loan for librarian, Librarian required",
 )
 async def search(
-    query: str | None = Query(
-        default=None,
-        min_length=1
-    ),
-    limit: int = Query(
-        default=10,
-        ge=1,
-        le=100
-    ),
-    offset: int = Query(
-        default=0,
-        ge=0
-    ),
+    query: str | None = Query(default=None, min_length=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> LoanSearchResponse:
 
     return await search_loans(
         session=session,
@@ -134,6 +139,7 @@ async def search(
     )
 
 
+
 # Search loans for reader
 # Reader required
 @router.get(
@@ -142,18 +148,11 @@ async def search(
     summary="Search a loan for reader, reader ID required",
 )
 async def my_loans(
-    limit: int = Query(
-        default=10,
-        ge=1,
-        le=100
-    ),
-    offset: int = Query(
-        default=0,
-        ge=0
-    ),
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> ReaderLoanSearchResponse:
 
     return await get_reader_loans(
         session=session,

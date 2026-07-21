@@ -1,6 +1,7 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, ForeignKey
@@ -8,7 +9,7 @@ from sqlalchemy import Column, ForeignKey
 
 
 # =====================================================
-#                       models
+#                       Models
 # =====================================================
 
 # Book <-> Language association table

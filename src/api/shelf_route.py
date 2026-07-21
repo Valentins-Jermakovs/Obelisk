@@ -1,21 +1,29 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Utils:
-from utils.token_utils import validate_token, librarian_required
+from utils.token_utils import (
+    validate_token, 
+    librarian_required
+)
+
 # Schemas:
-from schemas.shelf import (
+from schemas import (
     ShelfCreate, 
     ShelfUpdate, 
     ShelfRead, 
     ShelfSearchResponse,
     ShelfDeleteResponse
 )
+
 # Services:
 from services.shelf_service import (
     create_shelf,
@@ -25,6 +33,7 @@ from services.shelf_service import (
 )
 
 
+
 # Router object for export
 router = APIRouter(
     prefix="/shelves", 
@@ -32,9 +41,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create a shelf in library
 # Librarian role required
@@ -47,7 +57,9 @@ async def create(
     data: ShelfCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> ShelfRead:
+    
+    # Create shelf in library
     return await create_shelf(
         session=session,
         library_id=data.library_id,
@@ -55,6 +67,7 @@ async def create(
         section=data.section,
         payload=payload
     )
+
 
 
 # Search shelves in library
@@ -71,7 +84,8 @@ async def search(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> ShelfSearchResponse:
+    
     return await search_shelves(
         session=session,
         library_id=library_id,
@@ -79,6 +93,7 @@ async def search(
         limit=limit,
         offset=offset
     )
+
 
 
 # Update a shelf in library
@@ -93,7 +108,9 @@ async def update(
     data: ShelfUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(librarian_required)
-):
+) -> ShelfRead:
+    
+    # Update shelf
     return await update_shelf(
         session=session,
         shelf_id=shelf_id,
@@ -101,6 +118,7 @@ async def update(
         section=data.section,
         payload=payload
     )
+
 
 
 # Delete shelf by ID
@@ -115,7 +133,8 @@ async def delete(
     force: bool = Query(False),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> ShelfDeleteResponse:
+    
     return await delete_shelf(
         session=session,
         shelf_id=shelf_id,

@@ -1,11 +1,14 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Services:
 from services.language_service import (
     create_language,
@@ -13,16 +16,21 @@ from services.language_service import (
     update_language,
     delete_language
 )
+
 # Schemas
-from schemas.language import (
+from schemas import (
     LanguageCreate, 
     LanguageUpdate, 
     LanguageRead, 
     LanguageSearchResponse,
     LanguageDeleteResponse
 )
+
 # Utils:
-from utils.token_utils import admin_required, admin_or_librarian_required
+from utils.token_utils import (
+    admin_required, 
+    admin_or_librarian_required
+)
 
 
 
@@ -32,9 +40,11 @@ router = APIRouter(
     tags=["Languages endpoints - [create, read, update, delete]"]
 )
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create language
 # Return language object
@@ -48,12 +58,15 @@ async def create(
     data: LanguageCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LanguageRead:
+    
+    # Create a new language object
     return await create_language(
         session=session, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Search languages - search by name
@@ -69,13 +82,15 @@ async def search(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> LanguageSearchResponse:
+    
     return await search_languages(
         session=session,
         query=query,
         limit=limit,
         offset=offset
     )
+
 
 
 # Update language - by id
@@ -90,13 +105,15 @@ async def update(
     data: LanguageUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LanguageRead:
+    
     return await update_language(
         session=session, 
         language_id=language_id, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Delete language - by id
@@ -111,7 +128,8 @@ async def delete(
     force: bool = Query(False),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LanguageDeleteResponse:
+    
     return await delete_language(
         session=session, 
         language_id=language_id, 

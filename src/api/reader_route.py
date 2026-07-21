@@ -1,19 +1,23 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
-from schemas.reader import (
+from schemas import (
     ReaderCreate,
     ReaderUpdate,
     ReaderRead,
     ReaderSearchResponse,
     ReaderDeleteResponse
 )
+
 # Services:
 from services.reader_service import (
     create_reader,
@@ -21,6 +25,7 @@ from services.reader_service import (
     search_readers,
     delete_reader,
 )
+
 # Utils:
 from utils.token_utils import (
     admin_or_librarian_required, 
@@ -37,9 +42,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create reader
 # Everyone can be a reader
@@ -53,12 +59,15 @@ async def create(
     data: ReaderCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> ReaderRead:
+    
+    # Create new reader
     return await create_reader(
         session=session, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Search readers by name or email
@@ -74,13 +83,15 @@ async def search(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> ReaderSearchResponse:
+    
     return await search_readers(
         session=session,
         query=query,
         limit=limit,
         offset=offset
     )
+
 
 
 # Update reader by ID
@@ -95,13 +106,15 @@ async def update(
     data: ReaderUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> ReaderRead:
+    
     return await update_reader(
         session=session,
         reader_id=reader_id,
         data_in=data,
         payload=payload
     )
+
 
 
 # Delete reader by ID
@@ -115,7 +128,8 @@ async def delete(
     reader_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> ReaderDeleteResponse:
+    
     return await delete_reader(
         session=session,
         reader_id=reader_id,

@@ -1,10 +1,12 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimBook,
@@ -22,6 +24,8 @@ from models import (
     DimReader,
     DimPublisher
 )
+
+
 
 # ===================================================
 #            Helper functions for book service
@@ -45,6 +49,7 @@ async def _check_isbn_unique(
             status_code=409,
             detail="Book with this ISBN already exists"
         )
+
 
 
 # Get librarian email from access token payload
@@ -78,6 +83,7 @@ async def _get_librarian_from_payload(
         )
 
     return librarian
+
 
 
 # Check if librarian has access to book
@@ -132,6 +138,7 @@ async def _validate_librarian_access_to_book(
         )
 
 
+
 # This function validate ID's
 async def _validate_existing_ids(
     session: AsyncSession,
@@ -157,7 +164,8 @@ async def _validate_existing_ids(
             status_code=404,
             detail=f"{entity_name} not found: {list(missing)}"
         )
-    
+
+
 
 # This function create a new book
 async def _create_book(
@@ -181,6 +189,7 @@ async def _create_book(
     return book
 
 
+
 # This function link authors to a book
 async def _link_authors(
     session: AsyncSession, 
@@ -199,6 +208,7 @@ async def _link_authors(
         ))
 
 
+
 # This function link genres to a book
 async def _link_genres(
     session: AsyncSession, 
@@ -215,6 +225,7 @@ async def _link_genres(
             book_id=book_id,
             genre_id=gid
         ))
+
 
 
 # This function link languages to a book
@@ -253,6 +264,7 @@ async def _create_images(
             image_type=img.image_type,
             display_order=img.display_order
         ))
+
 
 
 # This function is used to check if a position is available
@@ -305,6 +317,7 @@ async def _check_position_is_available(
             status_code=409,
             detail="Position already used"
         )
+
 
 
 # This function validate the copies of a book
@@ -379,6 +392,7 @@ async def _validate_copies(
                 status_code=409,
                 detail=f"Inventory code '{c.inventory_code}' already exists in library shelf ID: {shelf.library_id}"
             )
+
 
 
 # Function that creates a copy of the book with the given inventory code and position. 
@@ -467,9 +481,11 @@ async def _create_copies(
         ))
 
 
+
 # ===================================================
 #         Helper functions for book_copy service
 # ===================================================
+
 
 
 # Get book's physical copy library ID
@@ -504,6 +520,7 @@ async def _get_copy_library_id(
     return library_id
 
 
+
 # Get last loan data from database and return last loan data
 async def _get_last_loan(
     session: AsyncSession,
@@ -523,6 +540,7 @@ async def _get_last_loan(
     return (
         await session.exec(stmt)
     ).first()
+
 
 
 # Check librarian access to library
@@ -556,7 +574,8 @@ async def _validate_librarian_access_to_library(
             status_code=403,
             detail="You are not assigned to this library"
         )
-    
+
+
 
 # Get accessible library IDs
 async def _get_accessible_library_ids(
@@ -586,7 +605,6 @@ async def _get_accessible_library_ids(
 #         Helper functions for loan service
 # ===================================================
 
-
 # Check reader exists
 async def _validate_reader(
     session: AsyncSession,
@@ -605,6 +623,7 @@ async def _validate_reader(
     return reader
 
 
+
 # Check book copy exists
 async def _validate_book_copy(
     session: AsyncSession,
@@ -621,6 +640,7 @@ async def _validate_book_copy(
         )
 
     return copy
+
 
 
 # Check that copy belongs to selected library
@@ -668,6 +688,7 @@ async def _validate_copy_library(
         )
     
 
+
 # Check that copy is available
 async def _check_copy_available(
     session: AsyncSession,
@@ -696,6 +717,7 @@ async def _check_copy_available(
         )
     
 
+
 # Get loan by ID
 async def _get_loan(
     session: AsyncSession,
@@ -711,6 +733,8 @@ async def _get_loan(
         )
 
     return loan
+
+
 
 # Create loan object
 async def _create_loan(
@@ -734,6 +758,7 @@ async def _create_loan(
     return loan
 
 
+
 # Get loan by ID
 async def _get_accessible_loan(
     session: AsyncSession,
@@ -751,6 +776,7 @@ async def _get_accessible_loan(
     )
 
     return loan
+
 
 
 # Get reader email from payload

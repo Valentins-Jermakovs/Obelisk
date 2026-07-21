@@ -1,6 +1,7 @@
 # =====================================================
 #                       imports
 # =====================================================
+
 # DIMENSION LAYER
 from .dim_author import DimAuthor
 from .dim_book import DimBook
@@ -12,14 +13,19 @@ from .dim_book_copy import DimBookCopy, BookCondition
 from .dim_genre import DimGenre
 from .dim_language import DimLanguage
 from .dim_publisher import DimPublisher
+
 # BOOK IMAGES
 from .book_image import BookImage, BookImageType
+
 # FACT LAYER
 from .fact_loan import FactLoan, LoanStatus
+
 # PHYSICAL TRACKING
 from .book_position import BookPosition
+
 # OBSERVABILITY
 from .audit_logs import AuditLog, AuditAction, EntityType
+
 # M2M
 from .librarian_library import LibrarianLibrary
 from .book_authors import BookAuthor

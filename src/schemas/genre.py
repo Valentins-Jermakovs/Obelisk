@@ -1,20 +1,27 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional, List
 
 
 
-# ===================================================
-#                      schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # Create genre
 class GenreCreate(BaseModel):
 
-    name: str = Field(min_length=1, max_length=100)
+    name: str = Field(
+        min_length=1, 
+        max_length=100
+    )
+
 
 
 # Update genre
@@ -22,6 +29,9 @@ class GenreUpdate(BaseModel):
 
     name: Optional[str] = None
 
+
+
+# ===================Response schemas================
 
 # Read genre
 class GenreRead(BaseModel):

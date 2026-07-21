@@ -1,10 +1,12 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimGenre, 
@@ -12,8 +14,10 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.genre import GenreCreate, GenreUpdate
+from schemas import GenreCreate, GenreUpdate
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -22,9 +26,9 @@ from services.audit_service import (
 
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create a new genre ervice
 async def create_genre(
@@ -94,6 +98,7 @@ async def create_genre(
     return genre
 
 
+
 # Search genres by name
 async def search_genres(
     session: AsyncSession,
@@ -132,6 +137,7 @@ async def search_genres(
         "offset": offset,
         "has_more": has_more,
     }
+
 
 
 # Update genres by id
@@ -243,6 +249,7 @@ async def update_genre(
 
     # Return the updated genre
     return genre
+
 
 
 # Delete genres by ID

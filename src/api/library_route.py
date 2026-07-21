@@ -1,14 +1,17 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from typing import Union
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Schemas:
-from schemas.library import (
+from schemas import (
     LibraryCreate,
     LibraryUpdate,
     LibraryRead,
@@ -16,6 +19,7 @@ from schemas.library import (
     LibraryDeleteResponse,
     LibrarySearchResponse
 )
+
 # Services:
 from services.library_service import (
     create_library,
@@ -24,8 +28,12 @@ from services.library_service import (
     update_library,
     delete_library
 )
+
 # Utils:
-from utils.token_utils import admin_required, validate_token
+from utils.token_utils import (
+    admin_required, 
+    validate_token
+)
 
 
 
@@ -36,9 +44,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create library
 # Administrator role required
@@ -51,12 +60,15 @@ async def create_library_route(
     data: LibraryCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibraryRead:
+    
+    # Create a new library object
     return await create_library(
         session=session, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Search library by name, city, address
@@ -72,13 +84,15 @@ async def search_libraries_route(
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> LibrarySearchResponse:
+    
     return await search_libraries(
         session=session,
         query=q,
         limit=limit,
         offset=offset
     )
+
 
 
 # Get library by ID
@@ -92,11 +106,13 @@ async def get_library_route(
     library_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(validate_token)
-):
+) -> LibraryRead:
+    
     return await get_library(
         session=session, 
         library_id=library_id
     )
+
 
 
 # Update library by ID
@@ -111,13 +127,16 @@ async def update_library_route(
     data: LibraryUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> LibraryRead:
+    
+    # Update the library with the given ID
     return await update_library(
         session=session, 
         library_id=library_id, 
         data_in=data,
         payload=payload
     )
+
 
 
 # Delete library by ID
@@ -133,6 +152,8 @@ async def delete_library_route(
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
 ):
+    
+    # Delete the library with the given ID
     return await delete_library(
         session=session,
         library_id=library_id,

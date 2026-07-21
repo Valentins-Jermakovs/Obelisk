@@ -1,6 +1,7 @@
-# ==================================================
-#                       imports
-# ==================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from sqlmodel.ext.asyncio.session import AsyncSession
 import csv
@@ -8,15 +9,19 @@ import os
 from sqlmodel import select, or_, func, Text, cast
 from datetime import date, datetime
 from enum import Enum
+
 # Models:
-from models import AuditLog, AuditAction, EntityType
+from models import (
+    AuditLog, 
+    AuditAction, 
+    EntityType
+)
 
 
 
-# ==================================================
-#      Service functions - helpers and CRUD
-# ==================================================
-
+# =====================================================
+#                     Services
+# =====================================================
 
 # Get audit logs with search and pagination
 async def get_audit_logs(
@@ -138,31 +143,23 @@ async def get_audit_logs(
         items.append(
             {
                 "id": log.id,
-
                 "user_id": log.user_id,
-
                 "action": (
                     log.action.value
                     if log.action
                     else None
                 ),
-
                 "entity_type": (
                     log.entity_type.value
                     if log.entity_type
                     else None
                 ),
-
                 "description": log.description,
-
                 "success": log.success,
-
                 "meta": log.meta,
-
                 "created_at": log.created_at,
             }
         )
-
 
 
     # Return paginated response
@@ -173,6 +170,7 @@ async def get_audit_logs(
         "offset": offset,
         "has_more": offset + len(items) < total,
     }
+
 
 
 # Resolve user id - helper function
@@ -192,6 +190,7 @@ def _resolve_user_id(payload: dict | None) -> int:
         return int(raw_user_id)
     except (TypeError, ValueError):
         return 0
+
 
 
 # Write audit log
@@ -218,6 +217,7 @@ async def write_audit_log(
     )
 
 
+
 # Write failed audit log
 async def write_failed_audit_log(
     session: AsyncSession,
@@ -240,6 +240,7 @@ async def write_failed_audit_log(
         error=error,
         **meta,
     )
+
 
 
 # Serialize audit data - used for audit log meta data
@@ -271,6 +272,8 @@ def serialize_audit_data(value):
     # Return serialized data
     return value
 
+
+
 # Export audit logs to CSV
 async def export_audit_logs(
     session: AsyncSession,
@@ -285,7 +288,6 @@ async def export_audit_logs(
     # Base query
     statement = select(AuditLog)
 
-
     # Filters:
 
     # Filter by user
@@ -294,13 +296,11 @@ async def export_audit_logs(
             AuditLog.user_id == user_id
         )
 
-
     # Filter by action
     if action is not None:
         statement = statement.where(
             AuditLog.action == action
         )
-
 
     # Filter by entity type
     if entity_type is not None:
@@ -308,19 +308,18 @@ async def export_audit_logs(
             AuditLog.entity_type == entity_type
         )
 
-
     # Filter by success status
     if success is not None:
         statement = statement.where(
             AuditLog.success == success
         )
 
-
     # Filter by date range
     if start_date:
         statement = statement.where(
             AuditLog.created_at >= start_date
         )
+
     if end_date:
         statement = statement.where(
             AuditLog.created_at <= end_date
@@ -337,9 +336,6 @@ async def export_audit_logs(
     result = await session.exec(statement)
     # Get results
     logs = result.all()
-
-
-
     # Create export directory
     export_dir = "exports"
 
@@ -370,7 +366,6 @@ async def export_audit_logs(
 
         writer = csv.writer(file)
 
-
         # Header
         writer.writerow([
             "id",
@@ -382,7 +377,6 @@ async def export_audit_logs(
             "meta",
             "created_at",
         ])
-
 
         # Data
         for log in logs:
@@ -399,6 +393,5 @@ async def export_audit_logs(
                 log.meta,
                 log.created_at,
             ])
-
 
     return file_path

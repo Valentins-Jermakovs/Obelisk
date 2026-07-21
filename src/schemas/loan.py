@@ -1,19 +1,22 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
+
 # Models:
 from models import LoanStatus
 
 
 
-# ===================================================
-#                       schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
 
+# ===================Request schemas===================
 
 # Loan create schema
 class LoanCreate(BaseModel):
@@ -23,13 +26,21 @@ class LoanCreate(BaseModel):
     library_id: int
 
 
+
 # Loan update schema
 class LoanUpdate(BaseModel):
 
     status: Optional[LoanStatus] = None
     return_date: Optional[datetime] = None
-    fine_amount: Optional[float] = Field(default=None, ge=0)
 
+    fine_amount: Optional[float] = Field(
+        default=None, 
+        ge=0
+    )
+
+
+
+# ===================Response schemas================
 
 # Loan book schema
 class LoanBook(BaseModel):
@@ -40,6 +51,7 @@ class LoanBook(BaseModel):
     inventory_code: str
 
 
+
 # Loan reader schema
 class LoanReader(BaseModel):
 
@@ -48,12 +60,14 @@ class LoanReader(BaseModel):
     email: str
 
 
+
 # Loan library schema
 class LoanLibrary(BaseModel):
 
     id: int
     name: str
     city: str
+
 
 
 # Loan read schema
@@ -71,6 +85,8 @@ class LoanRead(BaseModel):
     class Config:
         from_attributes = True
 
+
+
 # Library search read schema
 class LoanSearchRead(BaseModel):
 
@@ -87,6 +103,7 @@ class LoanSearchRead(BaseModel):
     fine_amount: float
 
 
+
 # Loan search schema - wrapper for loan read schema
 class LoanSearchResponse(BaseModel):
 
@@ -97,17 +114,21 @@ class LoanSearchResponse(BaseModel):
     has_more: bool
 
 
+
 # Loan delete response schema
 class LoanDeleteResponse(BaseModel):
 
     status: str
     loan_id: int
 
+
+
 # Loan delete warning schema
 class LoanDeleteWarning(BaseModel):
 
     warning: str
     message: str
+
 
 
 # Reader loan read schema
@@ -124,6 +145,7 @@ class ReaderLoanRead(BaseModel):
     fine_amount: float
 
 
+
 # Reader loan search schema
 class ReaderLoanSearchResponse(BaseModel):
 
@@ -133,6 +155,8 @@ class ReaderLoanSearchResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
+
 
 # Loan delete response schema
 class LoanDeleteResponse(BaseModel):

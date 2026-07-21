@@ -1,10 +1,12 @@
-# ====================================================
-#                       imports
-# ====================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from sqlmodel import select, or_, func
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimLibrary,
@@ -21,8 +23,11 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.library import LibraryCreate, LibraryUpdate
+from schemas import LibraryCreate, LibraryUpdate
+
+# Services:
 from services.audit_service import (
     write_audit_log, 
     write_failed_audit_log
@@ -30,9 +35,9 @@ from services.audit_service import (
 
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
+# =====================================================
+#                     Services
+# =====================================================
 
 # Normalize library data
 def normalize_library(data: dict) -> dict:
@@ -48,6 +53,8 @@ def normalize_library(data: dict) -> dict:
 
     return data
 
+
+
 # Format library data for display in UI
 def format_library(lib: DimLibrary) -> DimLibrary:
     
@@ -57,6 +64,7 @@ def format_library(lib: DimLibrary) -> DimLibrary:
         city=lib.city.title(),
         address=lib.address
     )
+
 
 
 # Create library
@@ -130,6 +138,7 @@ async def create_library(
     return format_library(library)
 
 
+
 # Search library by city/name/address
 async def search_libraries(
     session: AsyncSession,
@@ -172,6 +181,7 @@ async def search_libraries(
     }
 
 
+
 # Get library by ID
 async def get_library(
     session: AsyncSession, 
@@ -187,6 +197,7 @@ async def get_library(
         )
 
     return format_library(library)
+
 
 
 # Update library by ID
@@ -296,6 +307,7 @@ async def update_library(
 
     # Return the updated library object
     return format_library(library)
+
 
 
 # Delete library by ID

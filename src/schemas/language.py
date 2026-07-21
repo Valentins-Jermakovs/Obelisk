@@ -1,21 +1,51 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from pydantic import BaseModel, Field
 from typing import Optional
 
 
 
-# ===================================================
-#                      schemas
-# ===================================================
+# =====================================================
+#                       Schemas
+# =====================================================
+
+# ===================Request schemas===================
 
 # Language create schema 
 class LanguageCreate(BaseModel):
 
-    code: str = Field(min_length=2, max_length=10)
-    name: Optional[str] = Field(default=None, max_length=100)
+    code: str = Field(
+        min_length=2, 
+        max_length=10
+    )
+
+    name: Optional[str] = Field(
+        default=None, 
+        max_length=100
+    )
+
+
+
+# Language update schema
+class LanguageUpdate(BaseModel):
+
+    code: Optional[str] = Field(
+        default=None, 
+        min_length=2, 
+        max_length=10
+    )
+
+    name: Optional[str] = Field(
+        default=None, 
+        max_length=100
+    )
+
+
+
+# ===================Response schemas================
 
 # Language read schema
 class LanguageRead(BaseModel):
@@ -24,11 +54,7 @@ class LanguageRead(BaseModel):
     code: str
     name: Optional[str] = None
 
-# Language update schema
-class LanguageUpdate(BaseModel):
 
-    code: Optional[str] = Field(default=None, min_length=2, max_length=10)
-    name: Optional[str] = Field(default=None, max_length=100)
 
 # Search response schema
 class LanguageSearchResponse(BaseModel):
@@ -39,6 +65,7 @@ class LanguageSearchResponse(BaseModel):
     limit: int
     offset: int
     has_more: bool
+
 
 
 # Language delete response schema

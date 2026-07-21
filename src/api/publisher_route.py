@@ -1,21 +1,29 @@
-# ===================================================
-#                       imports
-# ===================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Dependencies:
 from config.db_dependency import get_db
+
 # Utils:
-from utils.token_utils import admin_required, admin_or_librarian_required
+from utils.token_utils import (
+    admin_required, 
+    admin_or_librarian_required
+)
+
 # Schemas:
-from schemas.publisher import (
+from schemas import (
     PublisherCreate,
     PublisherUpdate,
     PublisherRead,
     PublisherListResponse,
     PublisherDeleteResponse
 )
+
 # Services:
 from services.publisher_service import (
     create_publisher,
@@ -26,6 +34,7 @@ from services.publisher_service import (
 )
 
 
+
 # Router object for export
 router = APIRouter(
     prefix="/publishers",
@@ -33,9 +42,10 @@ router = APIRouter(
 )
 
 
-# ==================================================
-#       routes - create, read, update, delete
-# ==================================================
+
+# =====================================================
+#                       Endpoints
+# =====================================================
 
 # Create publisher
 # Admin role required
@@ -48,8 +58,9 @@ async def create_publisher_route(
     data: PublisherCreate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> PublisherRead:
 
+    # Create new publisher
     publisher = await create_publisher(
         session=session,
         name=data.name,
@@ -58,6 +69,7 @@ async def create_publisher_route(
     )
 
     return publisher
+
 
 
 # Search publishers
@@ -90,10 +102,9 @@ async def search_publishers_route(
         ge=0,
         description="Pagination offset"
     ),
-
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> PublisherListResponse:
 
     result = await search_publishers(
         session=session,
@@ -104,6 +115,7 @@ async def search_publishers_route(
     )
 
     return result
+
 
 
 # Get publisher by ID
@@ -117,7 +129,7 @@ async def get_publisher_route(
     publisher_id: int,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_or_librarian_required)
-):
+) -> PublisherRead:
 
     publisher = await get_publisher(
         session=session,
@@ -125,6 +137,7 @@ async def get_publisher_route(
     )
 
     return publisher
+
 
 
 # Update publisher
@@ -139,8 +152,9 @@ async def update_publisher_route(
     data: PublisherUpdate,
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> PublisherRead:
 
+    # Update publisher
     publisher = await update_publisher(
         session=session,
         publisher_id=publisher_id,
@@ -165,10 +179,9 @@ async def delete_publisher_route(
         default=False,
         description="Force delete publisher with linked books"
     ),
-
     session: AsyncSession = Depends(get_db),
     payload: dict = Depends(admin_required)
-):
+) -> PublisherDeleteResponse:
 
     result = await delete_publisher(
         session=session,

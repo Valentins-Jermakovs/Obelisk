@@ -1,10 +1,12 @@
 # =====================================================
-#                       imports
+#                        Imports
 # =====================================================
+
 # Libraries:
 from fastapi import HTTPException
 from sqlmodel import select, or_, func
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimLanguage, 
@@ -12,8 +14,10 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.language import LanguageCreate, LanguageUpdate
+from schemas import LanguageCreate, LanguageUpdate
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -22,10 +26,9 @@ from services.audit_service import (
 
 
 
-# ===================================================
-#      Service code - create, update, get, delete
-# ===================================================
-
+# =====================================================
+#                     Services
+# =====================================================
 
 # Create a new language in the database
 async def create_language(
@@ -99,6 +102,7 @@ async def create_language(
     return language
 
 
+
 # Search languages by code or name
 async def search_languages(
     session: AsyncSession,
@@ -144,6 +148,7 @@ async def search_languages(
         "offset": offset,
         "has_more": has_more
     }
+
 
 
 # Update a language service
@@ -259,6 +264,7 @@ async def update_language(
 
     # Return object
     return language
+
 
 
 # Delete the language by ID

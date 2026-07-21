@@ -1,6 +1,7 @@
-# ==================================================
-#                       imports
-# ==================================================
+# =====================================================
+#                        Imports
+# =====================================================
+
 # Libraries:
 from sqlmodel import (
     select, 
@@ -11,6 +12,7 @@ from sqlmodel import (
 )
 from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 # Models:
 from models import (
     DimAuthor, 
@@ -18,8 +20,10 @@ from models import (
     AuditAction, 
     EntityType
 )
+
 # Schemas:
-from schemas.author import AuthorCreate, AuthorUpdate
+from schemas import AuthorCreate, AuthorUpdate
+
 # Services:
 from services.audit_service import (
     write_audit_log, 
@@ -29,9 +33,9 @@ from services.audit_service import (
 
 
 
-# ==================================================
-#      Service functions - helpers and CRUD
-# ==================================================
+# =====================================================
+#                     Services
+# =====================================================
 
 # Normalize author's name and country
 def format_author(author: DimAuthor) -> DimAuthor:
@@ -42,6 +46,8 @@ def format_author(author: DimAuthor) -> DimAuthor:
 
     return author
 
+
+
 # Normalize author's data
 def normalize_author_data(data: dict) -> dict:
     for field in ("name", "country"):
@@ -49,6 +55,7 @@ def normalize_author_data(data: dict) -> dict:
             data[field] = data[field].strip().lower()
 
     return data
+
 
 
 # Create a new author service
@@ -122,6 +129,7 @@ async def create_author(
     return format_author(author)
 
 
+
 # Search for authors searched by name or country, birth year
 async def search_authors(
     session: AsyncSession,
@@ -166,6 +174,7 @@ async def search_authors(
         "offset": offset,
         "has_more": has_more,
     }
+
 
 
 # Update an author by ID
@@ -279,6 +288,7 @@ async def update_author(
 
     # Return the updated author
     return format_author(author)
+
 
 
 # Delete an author by ID
