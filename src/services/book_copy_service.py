@@ -39,6 +39,20 @@ from services.audit_service import (
 
 
 
+def _is_blocking_loan(loan) -> bool:
+    """Return True when a loan is still active or overdue."""
+    if not loan:
+        return False
+
+    status = getattr(loan, "status", loan)
+    return status in {
+        LoanStatus.ACTIVE,
+        LoanStatus.OVERDUE,
+        "active",
+        "overdue",
+    }
+
+
 # =====================================================
 #                     Services
 # =====================================================
@@ -638,12 +652,38 @@ async def delete_book_copy(
     )
 
 
-    # Get last loan
+    # Check for active or overdue loans before deletion
     loan = await _get_last_loan(
         session,
         copy_id
     )
 
+    if _is_blocking_loan(loan):
+        old_data["last_loan"] = {
+            "loan_id": loan.id,
+            "reader_id": loan.reader_id,
+            "status": loan.status,
+            "fine_amount": loan.fine_amount,
+        }
+
+        await write_failed_audit_log(
+            session=session,
+            payload=payload,
+            action=AuditAction.DELETE,
+            entity_type=EntityType.BOOK_COPY,
+            description=f"Failed to delete book copy '{copy.inventory_code}'",
+            error="Book copy has active or overdue loan",
+            copy_id=copy.id,
+            loan_id=loan.id,
+            loan_status=loan.status,
+        )
+
+        await session.commit()
+
+        raise HTTPException(
+            status_code=409,
+            detail="Book copy has active or overdue loan"
+        )
 
     if loan:
 
