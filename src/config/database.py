@@ -26,7 +26,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")    # Save DATABASE_URL
 
 engine = create_async_engine(
     DATABASE_URL,       # Engine URL
-    echo=True,          # Log SQL queries for debugging (change to False in production)
+    echo=False          # Log SQL queries for debugging (change to False in production)
 )
 
 
