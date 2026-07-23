@@ -52,6 +52,10 @@ ALGORITHM=HS256
 From the project root:
 
 ```bash
+docker network create backend-network
+```
+
+```bash
 docker compose up --build
 ```
 

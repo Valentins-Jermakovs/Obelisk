@@ -1,47 +1,75 @@
 services:
-  postgres:
+  obelisk-db:
     image: postgres:17
     restart: unless-stopped
+
     environment:
       POSTGRES_USER: librarian
       POSTGRES_PASSWORD: LibPass_2026
       POSTGRES_DB: library_catalog
+
     volumes:
-      - postgres_storage:/var/lib/postgresql/data
+      - obelisk_postgres_storage:/var/lib/postgresql/data
+
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U librarian -d library_catalog"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  app:
+    networks:
+      - backend-network
+
+  obelisk:
     build:
       context: .
       dockerfile: src/Dockerfile
+
     restart: unless-stopped
+
     depends_on:
-      postgres:
+      obelisk-db:
         condition: service_healthy
+
     ports:
       - "8001:8001"
+
     env_file:
       - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://librarian:LibPass_2026@postgres:5432/library_catalog
 
-  pgadmin:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://librarian:LibPass_2026@obelisk-db:5432/library_catalog
+
+    networks:
+      - backend-network
+
+  obelisk-pgadmin:
     image: dpage/pgadmin4:latest
+
     restart: unless-stopped
+
     depends_on:
-      - postgres
+      - obelisk-db
+
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: PgAdmin_2026
+
     ports:
       - "5151:80"
+
     volumes:
-      - pgadmin_storage:/var/lib/pgadmin
+      - obelisk_pgadmin_storage:/var/lib/pgadmin
+
+    networks:
+      - backend-network
 
 volumes:
-  postgres_storage:
-  pgadmin_storage:
+  obelisk_postgres_storage:
+
+  obelisk_pgadmin_storage:
+
+networks:
+  backend-network:
+    name: backend-network
+    external: true

@@ -5,7 +5,7 @@
 # Libraries:
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from fastapi.middleware.cors import CORSMiddleware
+# from fastapi.middleware.cors import CORSMiddleware
 
 # Utils:
 from utils.init_db import init_db
@@ -26,16 +26,21 @@ async def lifespan(app: FastAPI):
 # FastAPI object
 app = FastAPI(lifespan=lifespan)
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins = [
-        "http://localhost:5173"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+
+# CORS middleware
+# Enable only when running FastAPI services directly without Nginx.
+# In production, CORS is handled by the API Gateway (Nginx).
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins = [
+#         "http://localhost:5173"
+#     ],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
 
 
 # Routers
